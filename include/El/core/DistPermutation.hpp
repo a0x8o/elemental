@@ -52,9 +52,9 @@ struct PermutationMeta
     }
 
     PermutationMeta()
-    : align(0), comm(mpi::COMM_SELF),
-      sendCounts(1,0), sendDispls(1,0),
-      recvCounts(1,0), recvDispls(1,0)
+        : align(0), /*comm(mpi::COMM_SELF), FIXME (trb)*/
+          sendCounts(1,0), sendDispls(1,0),
+          recvCounts(1,0), recvDispls(1,0)
     { }
 
     PermutationMeta

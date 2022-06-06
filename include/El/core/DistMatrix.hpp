@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_CORE_DISTMATRIX_HPP
@@ -18,28 +18,25 @@ inline void AssertSameDist( const DistTypeA& distA, const DistTypeB& distB )
         RuntimeError("Matrices must have the same distribution");
 }
 
-template<typename scalarType>
-class DistMultiVec;
-
 } // namespace El
 
-#include <El/core/DistMatrix/Abstract.hpp>
+#include <El/core/DistMatrix/AbstractDistMatrix.hpp>
 
-#include <El/core/DistMatrix/Element.hpp>
-#include <El/core/DistMatrix/Element/CIRC_CIRC.hpp>
-#include <El/core/DistMatrix/Element/MC_MR.hpp>
-#include <El/core/DistMatrix/Element/MC_STAR.hpp>
-#include <El/core/DistMatrix/Element/MD_STAR.hpp>
-#include <El/core/DistMatrix/Element/MR_MC.hpp>
-#include <El/core/DistMatrix/Element/MR_STAR.hpp>
-#include <El/core/DistMatrix/Element/STAR_MC.hpp>
-#include <El/core/DistMatrix/Element/STAR_MD.hpp>
-#include <El/core/DistMatrix/Element/STAR_MR.hpp>
-#include <El/core/DistMatrix/Element/STAR_STAR.hpp>
-#include <El/core/DistMatrix/Element/STAR_VC.hpp>
-#include <El/core/DistMatrix/Element/STAR_VR.hpp>
-#include <El/core/DistMatrix/Element/VC_STAR.hpp>
-#include <El/core/DistMatrix/Element/VR_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix.hpp>
+#include <El/core/DistMatrix/ElementMatrix/CIRC_CIRC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MC_MR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MC_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MD_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MR_MC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/MR_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_MC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_MD.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_MR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_VC.hpp>
+#include <El/core/DistMatrix/ElementMatrix/STAR_VR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/VC_STAR.hpp>
+#include <El/core/DistMatrix/ElementMatrix/VR_STAR.hpp>
 
 #include <El/core/DistMatrix/Block.hpp>
 #include <El/core/DistMatrix/Block/CIRC_CIRC.hpp>
@@ -61,7 +58,7 @@ namespace El {
 
 #ifdef EL_HAVE_SCALAPACK
 
-namespace blacs { 
+namespace blacs {
 
 template<typename scalarType>
 inline int Context( const AbstractDistMatrix<scalarType>& A )
@@ -116,7 +113,7 @@ inline void AssertSameDists( const AbstractDistMatrix<scalarType>& A ) { }
 template<typename scalarType>
 inline void AssertSameDists
 ( const AbstractDistMatrix<scalarType>& A1,
-  const AbstractDistMatrix<scalarType>& A2 ) 
+  const AbstractDistMatrix<scalarType>& A2 )
 {
     if( A1.ColDist() != A2.ColDist() || A1.RowDist() != A2.RowDist() )
         LogicError("Distributions did not match");
@@ -126,7 +123,7 @@ template<typename scalarType,typename... Args>
 inline void AssertSameDists
 ( const AbstractDistMatrix<scalarType>& A1,
   const AbstractDistMatrix<scalarType>& A2,
-  Args&... args ) 
+  Args&... args )
 {
     if( A1.ColDist() != A2.ColDist() || A1.RowDist() != A2.RowDist() )
         LogicError("Distributions did not match");

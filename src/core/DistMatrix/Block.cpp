@@ -109,7 +109,7 @@ const BlockMatrix<T>&
 BlockMatrix<T>::operator+=( const BlockMatrix<T>& A )
 {
     EL_DEBUG_CSE
-    Axpy( T(1), A, *this );
+    Axpy( TypeTraits<T>::One(), A, *this );
     return *this;
 }
 
@@ -118,7 +118,7 @@ const BlockMatrix<T>&
 BlockMatrix<T>::operator+=( const AbstractDistMatrix<T>& A )
 {
     EL_DEBUG_CSE
-    Axpy( T(1), A, *this );
+    Axpy( TypeTraits<T>::One(), A, *this );
     return *this;
 }
 
@@ -126,8 +126,8 @@ template<typename T>
 const BlockMatrix<T>&
 BlockMatrix<T>::operator-=( const BlockMatrix<T>& A )
 {
-    EL_DEBUG_CSE
-    Axpy( T(-1), A, *this );
+    EL_DEBUG_CSE;
+    Axpy( -TypeTraits<T>::One(), A, *this );
     return *this;
 }
 
@@ -136,7 +136,7 @@ const BlockMatrix<T>&
 BlockMatrix<T>::operator-=( const AbstractDistMatrix<T>& A )
 {
     EL_DEBUG_CSE
-    Axpy( T(-1), A, *this );
+    Axpy( -TypeTraits<T>::One(), A, *this );
     return *this;
 }
 
@@ -153,7 +153,7 @@ BlockMatrix<T>::operator=( BlockMatrix<T>&& A )
     }
     else
     {
-        this->matrix_.ShallowSwap( A.matrix_ );
+        this->Matrix().ShallowSwap( A.Matrix() );
         this->viewType_ = A.viewType_;
         this->height_ = A.height_;
         this->width_ = A.width_;
@@ -180,10 +180,11 @@ BlockMatrix<T>::operator=( BlockMatrix<T>&& A )
 template<typename T>
 void BlockMatrix<T>::Empty( bool freeMemory )
 {
+
     if( freeMemory )
-        this->matrix_.Empty_();
+        this->Matrix().Empty_();
     else
-        this->matrix_.Resize( 0, 0 );
+        this->Matrix().Resize( 0, 0 );
 
     this->viewType_ = OWNER;
     this->height_ = 0;
@@ -198,7 +199,7 @@ void BlockMatrix<T>::Empty( bool freeMemory )
     this->rowConstrained_ = false;
     this->rootConstrained_ = false;
 
-    SwapClear( this->remoteUpdates );
+    //SwapClear( this->remoteUpdates_ );
 }
 
 template<typename T>
@@ -209,8 +210,10 @@ void BlockMatrix<T>::Resize( Int height, Int width )
     this->height_ = height;
     this->width_ = width;
     if( this->Participating() )
-        this->matrix_.Resize_
-        ( this->NewLocalHeight(height), this->NewLocalWidth(width) );
+        this->Matrix().Resize_(
+            this->NewLocalHeight(height),
+            this->NewLocalWidth(width),
+            this->NewLocalHeight(height));
 }
 
 template<typename T>
@@ -221,7 +224,7 @@ void BlockMatrix<T>::Resize( Int height, Int width, Int ldim )
     this->height_ = height;
     this->width_ = width;
     if( this->Participating() )
-        this->matrix_.Resize_
+        this->Matrix().Resize_
         ( this->NewLocalHeight(height), this->NewLocalWidth(width), ldim );
 }
 
@@ -256,12 +259,15 @@ void BlockMatrix<T>::MakeConsistent( bool includingViewers )
     {
         // TODO(poulson): Ensure roots are consistent within each cross
         // communicator
-        mpi::Broadcast( message, msgLength, this->Root(), this->CrossComm() );
+        // FIXME: SyncInfo hack
+        mpi::Broadcast(message, msgLength, this->Root(), this->CrossComm(),
+                       SyncInfo<Device::CPU>{});
     }
     if( includingViewers )
     {
         const Int vcRoot = grid.VCToViewing(0);
-        mpi::Broadcast( message, msgLength, vcRoot, grid.ViewingComm() );
+        mpi::Broadcast( message, msgLength, vcRoot, grid.ViewingComm(),
+                        SyncInfo<Device::CPU>{});
     }
     const ViewType newViewType    = static_cast<ViewType>(message[0]);
     const Int newHeight           = message[ 1];
@@ -475,29 +481,8 @@ void BlockMatrix<T>::Attach
   int colAlign, int rowAlign, Int colCut, Int rowCut,
   T* buffer, Int ldim, int root )
 {
-    EL_DEBUG_CSE
-    this->Empty();
-
-    this->grid_ = &g;
-    this->root_ = root;
-    this->height_ = height;
-    this->width_ = width;
-    this->blockHeight_ = blockHeight;
-    this->blockWidth_ = blockWidth;
-    this->colAlign_ = colAlign;
-    this->rowAlign_ = rowAlign;
-    this->colCut_ = colCut;
-    this->rowCut_ = rowCut;
-    this->colConstrained_ = true;
-    this->rowConstrained_ = true;
-    this->viewType_ = VIEW;
-    this->SetShifts();
-    if( this->Participating() )
-    {
-        Int localHeight = this->NewLocalHeight(height);
-        Int localWidth  = this->NewLocalWidth(width);
-        this->matrix_.Attach_( localHeight, localWidth, buffer, ldim );
-    }
+    EL_DEBUG_CSE;
+    LogicError("This function is going away. Do not use.");
 }
 
 template<typename T>
@@ -508,9 +493,9 @@ void BlockMatrix<T>::Attach
   int root )
 {
     // TODO(poulson): Assert that the local dimensions are correct
-    this->Attach
-    ( height, width, grid, blockHeight, blockWidth,
-      colAlign, rowAlign, colCut, rowCut, A.Buffer(), A.LDim(), root );
+    this->Attach(
+        height, width, grid, blockHeight, blockWidth,
+        colAlign, rowAlign, colCut, rowCut, A.Buffer(), A.LDim(), root);
 }
 
 template<typename T>
@@ -520,29 +505,8 @@ void BlockMatrix<T>::LockedAttach
   int colAlign, int rowAlign, Int colCut, Int rowCut,
   const T* buffer, Int ldim, int root )
 {
-    EL_DEBUG_CSE
-    this->Empty();
-
-    this->grid_ = &grid;
-    this->root_ = root;
-    this->height_ = height;
-    this->width_ = width;
-    this->blockHeight_ = blockHeight;
-    this->blockWidth_ = blockWidth;
-    this->colAlign_ = colAlign;
-    this->rowAlign_ = rowAlign;
-    this->colCut_ = colCut;
-    this->rowCut_ = rowCut;
-    this->colConstrained_ = true;
-    this->rowConstrained_ = true;
-    this->viewType_ = LOCKED_VIEW;
-    this->SetShifts();
-    if( this->Participating() )
-    {
-        Int localHeight = this->NewLocalHeight(height);
-        Int localWidth  = this->NewLocalWidth(width);
-        this->matrix_.LockedAttach_( localHeight, localWidth, buffer, ldim );
-    }
+    EL_DEBUG_CSE;
+    LogicError("This function is going away. Do not use.");
 }
 
 template<typename T>
@@ -553,9 +517,9 @@ void BlockMatrix<T>::LockedAttach
   int root )
 {
     // TODO(poulson): Assert that the local dimensions are correct
-    this->LockedAttach
-    ( height, width, grid, blockHeight, blockWidth,
-      colAlign, rowAlign, colCut, rowCut, A.LockedBuffer(), A.LDim(), root );
+    this->LockedAttach(
+        height, width, grid, blockHeight, blockWidth,
+        colAlign, rowAlign, colCut, rowCut, A.LockedBuffer(), A.LDim(), root);
 }
 
 // Basic queries
@@ -770,7 +734,7 @@ Int BlockMatrix<T>::NewLocalWidth( Int width ) const
 template<typename T>
 void BlockMatrix<T>::ShallowSwap( BlockMatrix<T>& A )
 {
-    this->matrix_.ShallowSwap( A.matrix_ );
+    this->Matrix().ShallowSwap( A.Matrix() );
     std::swap( this->viewType_, A.viewType_ );
     std::swap( this->height_ , A.height_ );
     std::swap( this->width_, A.width_ );
@@ -834,7 +798,7 @@ void AssertConforming2x2
         LogicError("2x2 set of matrices must aligned to combine");
 }
 
-// Instantiations for {Int,Real,Complex<Real>} for each Real in {float,double}
+// Instantiations for {Int,Real,Complex<Real>} for each Real in {float,double,half}
 // ###########################################################################
 
 #ifndef EL_RELEASE
@@ -855,11 +819,15 @@ void AssertConforming2x2
  #define PROTO(T) template class BlockMatrix<T>;
 #endif
 
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif // HYDROGEN_GPU_USE_FP16
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

@@ -9,119 +9,164 @@
 #ifndef EL_CHOLESKY_LOWER_VARIANT3_HPP
 #define EL_CHOLESKY_LOWER_VARIANT3_HPP
 
+#include "core/environment/decl.hpp"
 namespace El {
 namespace cholesky {
 
-template<typename F>
-void LowerVariant3Unblocked( Matrix<F>& A )
+#ifdef HYDROGEN_HAVE_GPU
+template <typename F>
+void LowerVariant3Unblocked(Matrix<F, Device::GPU>& A)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( A.Height() != A.Width() )
-          LogicError("Can only compute Cholesky factor of square matrices");
-    )
-    typedef Base<F> Real;
-    const Int n = A.Height();
-    const Int ALDim = A.LDim();
-    for( Int j=0; j<n; ++j )
+    LocalGPUCholesky(FillMode::LOWER_TRIANGLE, A);
+}
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename F>
+void LowerVariant3Unblocked(Matrix<F,Device::CPU>& A)
+{
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if(A.Height() != A.Width())
+        LogicError("Can only compute Cholesky factor of square matrices");
+#endif // EL_RELEASE
+    using Real = Base<F>;
+    Int const n = A.Height();
+    Int const ALDim = A.LDim();
+    for (Int j=0; j<n; ++j)
     {
         Real alpha11 = RealPart(A(j,j));
-        if( alpha11 <= Real(0) )
+        if (alpha11 <= Real(0))
             throw NonHPDMatrixException("A was not numerically HPD");
-        alpha11 = Sqrt( alpha11 );
+        alpha11 = Sqrt(alpha11);
         A(j,j) = alpha11;
 
         const Int a21Height = n-(j+1);
-        F* a21 = A.Buffer(j+1,j  );
+        F* a21 = A.Buffer(j+1,j );
         F* A22 = A.Buffer(j+1,j+1);
 
-        blas::Scal( a21Height, Real(1)/alpha11, a21, 1 );
-        blas::Her( 'L', a21Height, -Real(1), a21, 1, A22, ALDim );
+        Real alpha11inv = Real(1)/alpha11;
+        blas::Scal(a21Height, alpha11inv, a21, 1);
+        blas::Her('L', a21Height, -Real(1), a21, 1, A22, ALDim);
     }
 }
 
-template<typename F>
-void LowerVariant3Blocked( Matrix<F>& A )
+template <typename F, Device D>
+void LowerVariant3Blocked(Matrix<F,D>& A)
 {
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( A.Height() != A.Width() )
-          LogicError("Can only compute Cholesky factor of square matrices");
-    )
-    const Int n = A.Height();
-    const Int bsize = Blocksize();
-    for( Int k=0; k<n; k+=bsize )
+    EL_DEBUG_CSE;
+#ifndef EL_RELEASE
+    if(A.Height() != A.Width())
+        LogicError("Can only compute Cholesky factor of square matrices");
+#endif // EL_RELEASE
+    Int const n = A.Height();
+    Int const bsize = Blocksize();
+    for (Int k=0; k<n; k+=bsize)
     {
-        const Int nb = Min(bsize,n-k);
+        Int const nb = Min(bsize,n-k);
+        Range<Int> const ind1(k,    k+nb),
+                         ind2(k+nb, n   );
 
-        const Range<Int> ind1( k,    k+nb ),
-                         ind2( k+nb, n    );
+        auto A11 = A(ind1, ind1);
+        auto A21 = A(ind2, ind1);
+        auto A22 = A(ind2, ind2);
 
-        auto A11 = A( ind1, ind1 );
-        auto A21 = A( ind2, ind1 );
-        auto A22 = A( ind2, ind2 );
-
-        cholesky::LowerVariant3Unblocked( A11 );
-        Trsm( RIGHT, LOWER, ADJOINT, NON_UNIT, F(1), A11, A21 );
-        Herk( LOWER, NORMAL, Base<F>(-1), A21, Base<F>(1), A22 );
+        cholesky::LowerVariant3Unblocked(A11);
+        Trsm(RIGHT, LOWER, ADJOINT, NON_UNIT, F(1), A11, A21);
+        Herk(LOWER, NORMAL, Base<F>(-1), A21, Base<F>(1), A22);
     }
 }
 
-template<typename F>
-void LowerVariant3Blocked( AbstractDistMatrix<F>& APre )
+template <typename F, Device D>
+void LowerVariant3Blocked(AbstractDistMatrix<F>& APre, DeviceTag<D>)
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     EL_DEBUG_ONLY(
-      if( APre.Height() != APre.Width() )
+      if(APre.Height() != APre.Width())
           LogicError("Can only compute Cholesky factor of square matrices");
-    )
+   )
     const Grid& grid = APre.Grid();
 
-    DistMatrixReadWriteProxy<F,F,MC,MR> AProx( APre );
+    DistMatrixReadWriteProxy<F,F,MC,MR,ELEMENT,D> AProx(APre);
     auto& A = AProx.Get();
 
-    DistMatrix<F,STAR,STAR> A11_STAR_STAR(grid);
-    DistMatrix<F,VC,  STAR> A21_VC_STAR(grid);
-    DistMatrix<F,VR,  STAR> A21_VR_STAR(grid);
-    DistMatrix<F,STAR,MC  > A21Trans_STAR_MC(grid);
-    DistMatrix<F,STAR,MR  > A21Adj_STAR_MR(grid);
+    DistMatrix<F,STAR,STAR,ELEMENT,D> A11_STAR_STAR(grid);
+    DistMatrix<F,VC,  STAR,ELEMENT,D> A21_VC_STAR(grid);
+    DistMatrix<F,VR,  STAR,ELEMENT,D> A21_VR_STAR(grid);
+    DistMatrix<F,STAR,MC  ,ELEMENT,D> A21Trans_STAR_MC(grid);
+    DistMatrix<F,STAR,MR  ,ELEMENT,D> A21Adj_STAR_MR(grid);
 
     const Int n = A.Height();
     const Int bsize = Blocksize();
-    for( Int k=0; k<n; k+=bsize )
+    for(Int k=0; k<n; k+=bsize)
     {
         const Int nb = Min(bsize,n-k);
 
-        const Range<Int> ind1( k,    k+nb ),
-                         ind2( k+nb, n    );
+        const Range<Int> ind1(k,    k+nb),
+                         ind2(k+nb, n   );
 
-        auto A11 = A( ind1, ind1 );
-        auto A21 = A( ind2, ind1 );
-        auto A22 = A( ind2, ind2 );
+        auto A11 = A(ind1, ind1);
+        auto A21 = A(ind2, ind1);
+        auto A22 = A(ind2, ind2);
 
         A11_STAR_STAR = A11;
-        Cholesky( LOWER, A11_STAR_STAR );
+        Cholesky(LOWER, A11_STAR_STAR);
         A11 = A11_STAR_STAR;
 
-        A21_VC_STAR.AlignWith( A22 );
+        A21_VC_STAR.AlignWith(A22);
         A21_VC_STAR = A21;
         LocalTrsm
-        ( RIGHT, LOWER, ADJOINT, NON_UNIT, F(1), A11_STAR_STAR, A21_VC_STAR );
+        (RIGHT, LOWER, ADJOINT, NON_UNIT, F(1), A11_STAR_STAR, A21_VC_STAR);
 
-        A21_VR_STAR.AlignWith( A22 );
+        A21_VR_STAR.AlignWith(A22);
         A21_VR_STAR = A21_VC_STAR;
-        A21Trans_STAR_MC.AlignWith( A22 );
-        A21Adj_STAR_MR.AlignWith( A22 );
-        Transpose( A21_VC_STAR, A21Trans_STAR_MC );
-        Adjoint( A21_VR_STAR, A21Adj_STAR_MR );
+        A21Trans_STAR_MC.AlignWith(A22);
+        A21Adj_STAR_MR.AlignWith(A22);
+        Transpose(A21_VC_STAR, A21Trans_STAR_MC);
+        Adjoint(A21_VR_STAR, A21Adj_STAR_MR);
 
         // (A21^T[* ,MC])^T A21^H[* ,MR] = A21[MC,* ] A21^H[* ,MR]
         //                               = (A21 A21^H)[MC,MR]
-        LocalTrrk
-        ( LOWER, TRANSPOSE,
-          F(-1), A21Trans_STAR_MC, A21Adj_STAR_MR, F(1), A22 );
+        LocalTrrk(
+            LOWER, TRANSPOSE,
+            F(-1), A21Trans_STAR_MC, A21Adj_STAR_MR, F(1), A22);
 
-        Transpose( A21Trans_STAR_MC, A21 );
+        Transpose(A21Trans_STAR_MC, A21);
+    }
+}
+
+#if defined HYDROGEN_HAVE_GPU
+
+#if defined HYDROGEN_HAVE_HALF
+void LowerVariant3Blocked(AbstractDistMatrix<cpu_half_type>&, DeviceTag<Device::GPU>)
+{
+    RuntimeError("This function is not supported on GPU with this type.");
+}
+#endif
+
+#if defined HYDROGEN_GPU_USE_FP16
+void LowerVariant3Blocked(AbstractDistMatrix<gpu_half_type>&, DeviceTag<Device::CPU>)
+{
+    RuntimeError("This function is not supported on GPU with this type.");
+}
+#endif
+
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename F>
+void LowerVariant3Blocked(AbstractDistMatrix<F>& APre)
+{
+    switch (APre.GetLocalDevice())
+    {
+    case Device::CPU:
+        LowerVariant3Blocked(APre, DeviceTag<Device::CPU>{});
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        LowerVariant3Blocked(APre, DeviceTag<Device::GPU>{});
+        break;
+#endif
+    default:
+        RuntimeError("Unknown device type.");
     }
 }
 

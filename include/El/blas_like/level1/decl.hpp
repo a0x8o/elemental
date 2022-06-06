@@ -29,10 +29,6 @@ template<typename Ring>
 void Adjoint( const BlockMatrix<Ring>& A, BlockMatrix<Ring>& B );
 template<typename Ring>
 void Adjoint( const AbstractDistMatrix<Ring>& A, AbstractDistMatrix<Ring>& B );
-template<typename Ring>
-void Adjoint( const SparseMatrix<Ring>& A, SparseMatrix<Ring>& B );
-template<typename Ring>
-void Adjoint( const DistSparseMatrix<Ring>& A, DistSparseMatrix<Ring>& B );
 
 // AdjointContract
 // ===============
@@ -52,16 +48,10 @@ void AdjointAxpy
 ( Ring2 alpha, const Matrix<Ring1>& X, Matrix<Ring1>& Y );
 template<typename Ring1,typename Ring2>
 void AdjointAxpy
-( Ring2 alpha, const SparseMatrix<Ring1>& X, SparseMatrix<Ring1>& Y );
-template<typename Ring1,typename Ring2>
-void AdjointAxpy
 ( Ring2 alpha, const ElementalMatrix<Ring1>& X, ElementalMatrix<Ring1>& Y );
 template<typename Ring1,typename Ring2>
 void AdjointAxpy
 ( Ring2 alpha, const BlockMatrix<Ring1>& X, BlockMatrix<Ring1>& Y );
-template<typename Ring1,typename Ring2>
-void AdjointAxpy
-( Ring2 alpha, const DistSparseMatrix<Ring1>& X, DistSparseMatrix<Ring1>& Y );
 
 // AdjointAxpyContract
 // ===================
@@ -77,12 +67,20 @@ void AdjointAxpyContract
 // AllReduce
 // =========
 template<typename T>
-void AllReduce( Matrix<T>& A, mpi::Comm comm, mpi::Op op=mpi::SUM );
+void AllReduce( AbstractMatrix<T>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
+template<typename T, Device D, typename=EnableIf<IsDeviceValidType<T,D>>>
+void AllReduce( Matrix<T,D>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
+template<typename T, Device D,
+         typename=DisableIf<IsDeviceValidType<T,D>>,typename=void>
+void AllReduce( Matrix<T,D>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
 template<typename T>
-void AllReduce( AbstractDistMatrix<T>& A, mpi::Comm comm, mpi::Op op=mpi::SUM );
+void AllReduce( AbstractDistMatrix<T>& A, mpi::Comm const& comm, mpi::Op op=mpi::SUM );
 
 // Axpy
 // ====
+template<typename Ring1,typename Ring2>
+void Axpy(
+    Ring2 alpha, const AbstractMatrix<Ring1>& X, AbstractMatrix<Ring1>& Y );
 template<typename Ring1,typename Ring2>
 void Axpy( Ring2 alpha, const Matrix<Ring1>& X, Matrix<Ring1>& Y );
 template<typename Ring1,typename Ring2>
@@ -94,27 +92,30 @@ template<typename Ring1,typename Ring2>
 void Axpy
 ( Ring2 alpha, const AbstractDistMatrix<Ring1>& X,
                      AbstractDistMatrix<Ring1>& Y );
-template<typename Ring1,typename Ring2>
-void Axpy
-( Ring2 alpha, const DistMultiVec<Ring1>& X, DistMultiVec<Ring1>& Y );
-template<typename Ring1,typename Ring2>
-void Axpy
-( Ring2 alpha, const SparseMatrix<Ring1>& X, SparseMatrix<Ring1>& Y );
-template<typename Ring1,typename Ring2>
-void Axpy
-( Ring2 alpha, const DistSparseMatrix<Ring1>& X, DistSparseMatrix<Ring1>& Y );
 
 namespace axpy {
 namespace util {
 
 template<typename Ring>
-void InterleaveMatrixUpdate
-( Ring alpha, Int localHeight, Int localWidth,
-  const Ring* A, Int colStrideA, Int rowStrideA,
-        Ring* B, Int colStrideB, Int rowStrideB );
+void InterleaveMatrixUpdate(
+    Ring alpha, Int localHeight, Int localWidth,
+    Ring const* A, Int colStrideA, Int rowStrideA,
+    Ring* B, Int colStrideB, Int rowStrideB,
+    SyncInfo<Device::CPU>);
+
+#ifdef HYDROGEN_HAVE_GPU
 template<typename Ring>
-void UpdateWithLocalData
-( Ring alpha, const ElementalMatrix<Ring>& A, DistMatrix<Ring,STAR,STAR>& B );
+void InterleaveMatrixUpdate(
+    Ring alpha, Int localHeight, Int localWidth,
+    Ring const* A, Int colStrideA, Int rowStrideA,
+    Ring* B, Int colStrideB, Int rowStrideB,
+    SyncInfo<Device::GPU>);
+#endif // HYDROGEN_HAVE_GPU
+
+template<typename Ring, Device D=Device::CPU>
+void UpdateWithLocalData(
+    Ring alpha, ElementalMatrix<Ring> const& A,
+    DistMatrix<Ring,STAR,STAR,ELEMENT,D>& B );
 
 } // namespace util
 } // namespace axpy
@@ -143,14 +144,6 @@ template<typename Ring1,typename Ring2>
 void AxpyTrapezoid
 ( UpperOrLower uplo, Ring2 alpha,
   const BlockMatrix<Ring1>& X, BlockMatrix<Ring1>& Y, Int offset=0 );
-template<typename Ring1,typename Ring2>
-void AxpyTrapezoid
-( UpperOrLower uplo, Ring2 alpha,
-  const SparseMatrix<Ring1>& X, SparseMatrix<Ring1>& Y, Int offset=0 );
-template<typename Ring1,typename Ring2>
-void AxpyTrapezoid
-( UpperOrLower uplo, Ring2 alpha,
-  const DistSparseMatrix<Ring1>& X, DistSparseMatrix<Ring1>& Y, Int offset=0 );
 
 template<typename Ring>
 void LocalAxpyTrapezoid
@@ -160,29 +153,39 @@ void LocalAxpyTrapezoid
 
 // Broadcast
 // =========
+template<typename T, Device D>
+void Broadcast( Matrix<T, D>& A, mpi::Comm const& comm, int rank=0 );
 template<typename T>
-void Broadcast( Matrix<T>& A, mpi::Comm comm, int rank=0 );
+void Broadcast( AbstractMatrix<T>& A, mpi::Comm const& comm, int rank=0 );
 template<typename T>
-void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm comm, int rank=0 );
+void Broadcast( AbstractDistMatrix<T>& A, mpi::Comm const& comm, int rank=0 );
 
 // Send
 // ====
-template<typename T>
-void Send( const Matrix<T>& A, mpi::Comm comm, int destination );
+template <typename T>
+void Send(AbstractMatrix<T> const& A, mpi::Comm const& comm, int destination);
+template <typename T, Device D>
+void Send(Matrix<T,D> const& A, mpi::Comm const& comm, int destination);
 
 // SendRecv
 // ========
 template<typename T>
 void SendRecv
-( const Matrix<T>& A, Matrix<T>& B, mpi::Comm comm,
+( const AbstractMatrix<T>& A, AbstractMatrix<T>& B, mpi::Comm const& comm,
+  int sendRank, int recvRank );
+template<typename T, Device D>
+void SendRecv
+( const Matrix<T,D>& A, Matrix<T,D>& B, mpi::Comm const& comm,
   int sendRank, int recvRank );
 
 // Recv
 // ====
 // On entry, the matrix 'A' must be of the correct size and will be overwritten
 // on exit (without changing the leading dimension).
-template<typename T>
-void Recv( Matrix<T>& A, mpi::Comm comm, int source );
+template <typename T>
+void Recv(AbstractMatrix<T>& A, mpi::Comm const& comm, int source);
+template<typename T, Device D>
+void Recv(Matrix<T,D>& A, mpi::Comm const& comm, int source );
 
 // Column norms
 // ============
@@ -199,15 +202,6 @@ void ColumnTwoNorms
 template<typename Field,Dist U,Dist V,DistWrap W>
 void ColumnTwoNorms
 ( const DistMatrix<Field,U,V,W>& X, DistMatrix<Base<Field>,V,STAR,W>& norms );
-template<typename Field>
-void ColumnTwoNorms
-( const DistMultiVec<Field>& X, Matrix<Base<Field>>& norms );
-template<typename Field>
-void ColumnTwoNorms
-( const SparseMatrix<Field>& X, Matrix<Base<Field>>& norms );
-template<typename Field>
-void ColumnTwoNorms
-( const DistSparseMatrix<Field>& X, DistMultiVec<Base<Field>>& norms );
 
 // Separated complex data
 // ^^^^^^^^^^^^^^^^^^^^^^
@@ -223,12 +217,6 @@ void ColumnTwoNorms
 ( const DistMatrix<Real,U,V>& XReal,
   const DistMatrix<Real,U,V>& XImag,
         DistMatrix<Real,V,STAR>& norms );
-template<typename Real,
-         typename=EnableIf<IsReal<Real>>>
-void ColumnTwoNorms
-( const DistMultiVec<Real>& XReal,
-  const DistMultiVec<Real>& XImag,
-        Matrix<Real>& norms );
 
 // Max norms
 // ---------
@@ -238,15 +226,6 @@ void ColumnMaxNorms
 template<typename Ring,Dist U,Dist V,DistWrap W>
 void ColumnMaxNorms
 ( const DistMatrix<Ring,U,V,W>& X, DistMatrix<Base<Ring>,V,STAR,W>& norms );
-template<typename Ring>
-void ColumnMaxNorms
-( const DistMultiVec<Ring>& X, Matrix<Base<Ring>>& norms );
-template<typename Ring>
-void ColumnMaxNorms
-( const SparseMatrix<Ring>& X, Matrix<Base<Ring>>& norms );
-template<typename Ring>
-void ColumnMaxNorms
-( const DistSparseMatrix<Ring>& X, DistMultiVec<Base<Ring>>& norms );
 
 // Column minimum absolute values
 // ==============================
@@ -258,15 +237,6 @@ void ColumnMinAbs
 template<typename Ring,Dist U,Dist V>
 void ColumnMinAbs
 ( const DistMatrix<Ring,U,V>& X, DistMatrix<Base<Ring>,V,STAR>& mins );
-template<typename Ring>
-void ColumnMinAbs
-( const DistMultiVec<Ring>& X, Matrix<Base<Ring>>& mins );
-template<typename Ring>
-void ColumnMinAbs
-( const SparseMatrix<Ring>& X, Matrix<Base<Ring>>& mins );
-template<typename Ring>
-void ColumnMinAbs
-( const DistSparseMatrix<Ring>& X, DistMultiVec<Base<Ring>>& mins );
 
 template<typename Ring>
 void ColumnMinAbsNonzero
@@ -278,21 +248,6 @@ void ColumnMinAbsNonzero
 ( const DistMatrix<Ring,U,V>& X,
   const DistMatrix<Base<Ring>,V,STAR>& upperBounds,
         DistMatrix<Base<Ring>,V,STAR>& mins );
-template<typename Ring>
-void ColumnMinAbsNonzero
-( const DistMultiVec<Ring>& X,
-  const Matrix<Base<Ring>>& upperBounds,
-        Matrix<Base<Ring>>& mins );
-template<typename Ring>
-void ColumnMinAbsNonzero
-( const SparseMatrix<Ring>& X,
-  const Matrix<Base<Ring>>& upperBounds,
-        Matrix<Base<Ring>>& mins );
-template<typename Ring>
-void ColumnMinAbsNonzero
-( const DistSparseMatrix<Ring>& X,
-  const DistMultiVec<Base<Ring>>& upperBounds,
-        DistMultiVec<Base<Ring>>& mins );
 
 // Row norms
 // =========
@@ -309,15 +264,6 @@ void RowTwoNorms
 template<typename Field,Dist U,Dist V>
 void RowTwoNorms
 ( const DistMatrix<Field,U,V>& X, DistMatrix<Base<Field>,U,STAR>& norms );
-template<typename Field>
-void RowTwoNorms
-( const DistMultiVec<Field>& X, DistMultiVec<Base<Field>>& norms );
-template<typename Field>
-void RowTwoNorms
-( const SparseMatrix<Field>& X, Matrix<Base<Field>>& norms );
-template<typename Field>
-void RowTwoNorms
-( const DistSparseMatrix<Field>& X, DistMultiVec<Base<Field>>& norms );
 
 // Max norm
 // --------
@@ -327,15 +273,6 @@ void RowMaxNorms
 template<typename Ring,Dist U,Dist V>
 void RowMaxNorms
 ( const DistMatrix<Ring,U,V>& X, DistMatrix<Base<Ring>,U,STAR>& norms );
-template<typename Ring>
-void RowMaxNorms
-( const DistMultiVec<Ring>& X, DistMultiVec<Base<Ring>>& norms );
-template<typename Ring>
-void RowMaxNorms
-( const SparseMatrix<Ring>& X, Matrix<Base<Ring>>& norms );
-template<typename Ring>
-void RowMaxNorms
-( const DistSparseMatrix<Ring>& X, DistMultiVec<Base<Ring>>& norms );
 
 // Row minimum absolute values
 // ===========================
@@ -347,15 +284,6 @@ void RowMinAbs
 template<typename Ring,Dist U,Dist V>
 void RowMinAbs
 ( const DistMatrix<Ring,U,V>& X, DistMatrix<Base<Ring>,U,STAR>& mins );
-template<typename Ring>
-void RowMinAbs
-( const DistMultiVec<Ring>& X, DistMultiVec<Base<Ring>>& mins );
-template<typename Ring>
-void RowMinAbs
-( const SparseMatrix<Ring>& X, Matrix<Base<Ring>>& mins );
-template<typename Ring>
-void RowMinAbs
-( const DistSparseMatrix<Ring>& X, DistMultiVec<Base<Ring>>& mins );
 
 template<typename Ring>
 void RowMinAbsNonzero
@@ -367,21 +295,6 @@ void RowMinAbsNonzero
 ( const DistMatrix<Ring,U,V>& X,
   const DistMatrix<Base<Ring>,U,STAR>& upperBounds,
         DistMatrix<Base<Ring>,U,STAR>& mins );
-template<typename Ring>
-void RowMinAbsNonzero
-( const DistMultiVec<Ring>& X,
-  const DistMultiVec<Base<Ring>>& upperBounds,
-        DistMultiVec<Base<Ring>>& mins );
-template<typename Ring>
-void RowMinAbsNonzero
-( const SparseMatrix<Ring>& X,
-  const Matrix<Base<Ring>>& upperBounds,
-        Matrix<Base<Ring>>& mins );
-template<typename Ring>
-void RowMinAbsNonzero
-( const DistSparseMatrix<Ring>& X,
-  const DistMultiVec<Base<Ring>>& upperBounds,
-        DistMultiVec<Base<Ring>>& mins );
 
 // Concatenation
 // =============
@@ -398,21 +311,6 @@ void HCat
 ( const AbstractDistMatrix<T>& A,
   const AbstractDistMatrix<T>& B,
         AbstractDistMatrix<T>& C );
-template<typename T>
-void HCat
-( const SparseMatrix<T>& A,
-  const SparseMatrix<T>& B,
-        SparseMatrix<T>& C );
-template<typename T>
-void HCat
-( const DistSparseMatrix<T>& A,
-  const DistSparseMatrix<T>& B,
-        DistSparseMatrix<T>& C );
-template<typename T>
-void HCat
-( const DistMultiVec<T>& A,
-  const DistMultiVec<T>& B,
-        DistMultiVec<T>& C );
 
 // Vertical concatenation: C := [A; B]
 // -----------------------------------
@@ -426,21 +324,6 @@ void VCat
 ( const AbstractDistMatrix<T>& A,
   const AbstractDistMatrix<T>& B,
         AbstractDistMatrix<T>& C );
-template<typename T>
-void VCat
-( const SparseMatrix<T>& A,
-  const SparseMatrix<T>& B,
-        SparseMatrix<T>& C );
-template<typename T>
-void VCat
-( const DistSparseMatrix<T>& A,
-  const DistSparseMatrix<T>& B,
-        DistSparseMatrix<T>& C );
-template<typename T>
-void VCat
-( const DistMultiVec<T>& A,
-  const DistMultiVec<T>& B,
-        DistMultiVec<T>& C );
 
 // Conjugate
 // =========
@@ -483,6 +366,9 @@ void Contract( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
 // Copy
 // ====
+<<<<<<< HEAD
+class BaseDistMatrix;
+=======
 
 template<typename T>
 void Copy( const Matrix<T>& A, Matrix<T>& B );
@@ -570,145 +456,305 @@ template<typename T>
 void CopyFromRoot( const DistMultiVec<T>& XDist, Matrix<T>& X );
 template<typename T>
 void CopyFromNonRoot( const DistMultiVec<T>& XDist, int root=0 );
+>>>>>>> f3ede0050 (Fix ambiguous template special. errors with GCC 7+)
 
 namespace copy {
 namespace util {
 
-template<typename T>
-void InterleaveMatrix
-( Int height, Int width,
-  const T* A, Int colStrideA, Int rowStrideA,
-        T* B, Int colStrideB, Int rowStrideB );
+template <typename T, typename=EnableIf<IsStorageType<T,Device::CPU>>>
+void InterleaveMatrix(
+    Int height, Int width,
+    T const* A, Int colStrideA, Int rowStrideA,
+    T* B, Int colStrideB, Int rowStrideB,
+    SyncInfo<Device::CPU>);
 
-template<typename T>
-void ColStridedPack
-( Int height, Int width,
-  Int colAlign, Int colStride,
-  const T* A,         Int ALDim,
-        T* BPortions, Int portionSize );
-template<typename T>
-void ColStridedColumPack
-( Int height,
-  Int colAlign, Int colStride,
-  const T* A,
-        T* BPortions, Int portionSize );
-template<typename T>
-void ColStridedUnpack
-( Int height, Int width,
-  Int colAlign, Int colStride,
-  const T* APortions, Int portionSize,
-        T* B,         Int BLDim );
-template<typename T>
-void PartialColStridedPack
-( Int height, Int width,
-  Int colAlign, Int colStride,
-  Int colStrideUnion, Int colStridePart, Int colRankPart,
-  Int colShiftA,
-  const T* A,         Int ALDim,
-        T* BPortions, Int portionSize );
-template<typename T>
-void PartialColStridedColumnPack
-( Int height,
-  Int colAlign, Int colStride,
-  Int colStrideUnion, Int colStridePart, Int colRankPart,
-  Int colShiftA,
-  const T* A,
-        T* BPortions, Int portionSize );
-template<typename T>
-void PartialColStridedUnpack
-( Int height, Int width,
-  Int colAlign, Int colStride,
-  Int colStrideUnion, Int colStridePart, Int colRankPart,
-  Int colShiftB,
-  const T* APortions, Int portionSize,
-        T* B,         Int BLDim );
-template<typename T>
-void PartialColStridedColumnUnpack
-( Int height,
-  Int colAlign, Int colStride,
-  Int colStrideUnion, Int colStridePart, Int colRankPart,
-  Int colShiftB,
-  const T* APortions, Int portionSize,
-        T* B );
+template <typename T, typename=EnableIf<IsStorageType<T,Device::CPU>>>
+void RowStridedPack(
+    Int height, Int width,
+    Int rowAlign, Int rowStride,
+    const T* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<Device::CPU> );
 
-template<typename T>
-void RowStridedPack
-( Int height, Int width,
+template <typename T, typename=EnableIf<IsStorageType<T,Device::CPU>>>
+void RowStridedUnpack(
+ Int height, Int width,
   Int rowAlign, Int rowStride,
-  const T* A,         Int ALDim,
-        T* BPortions, Int portionSize );
-template<typename T>
-void RowStridedUnpack
-( Int height, Int width,
-  Int rowAlign, Int rowStride,
-  const T* APortions, Int portionSize,
-        T* B,         Int BLDim );
-template<typename T>
-void PartialRowStridedPack
-( Int height, Int width,
-  Int rowAlign, Int rowStride,
-  Int rowStrideUnion, Int rowStridePart, Int rowRankPart,
-  Int rowShiftA,
-  const T* A,         Int ALDim,
-        T* BPortions, Int portionSize );
-template<typename T>
-void PartialRowStridedUnpack
-( Int height, Int width,
-  Int rowAlign, Int rowStride,
-  Int rowStrideUnion, Int rowStridePart, Int rowRankPart,
-  Int rowShiftB,
-  const T* APortions, Int portionSize,
-        T* B,         Int BLDim );
+  T const* APortions, Int portionSize,
+        T* B, Int BLDim,
+  SyncInfo<Device::CPU> );
 
-template<typename T>
-void StridedPack
-( Int height, Int width,
-  Int colAlign, Int colStride,
+template <typename T, typename=EnableIf<IsStorageType<T,Device::CPU>>>
+void PartialRowStridedPack(
+    Int height, Int width,
+    Int rowAlign, Int rowStride,
+    Int rowStrideUnion, Int rowStridePart, Int rowRankPart,
+    Int rowShiftA,
+    T const* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<Device::CPU> );
+
+template <typename T, typename=EnableIf<IsStorageType<T,Device::CPU>>>
+void PartialRowStridedUnpack(
+    Int height, Int width,
+    Int rowAlign, Int rowStride,
+    Int rowStrideUnion, Int rowStridePart, Int rowRankPart,
+    Int rowShiftB,
+    const T* APortions, Int portionSize,
+    T* B, Int BLDim,
+    SyncInfo<Device::CPU> );
+
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T, typename=EnableIf<IsStorageType<T,Device::GPU>>>
+void InterleaveMatrix(
+    Int height, Int width,
+    T const* A, Int colStrideA, Int rowStrideA,
+    T* B, Int colStrideB, Int rowStrideB,
+    SyncInfo<Device::GPU>);
+
+template <typename T, typename=EnableIf<IsStorageType<T,Device::GPU>>>
+void RowStridedPack(
+    Int height, Int width,
+    Int rowAlign, Int rowStride,
+    const T* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<Device::GPU> );
+
+template <typename T, typename=EnableIf<IsStorageType<T,Device::GPU>>>
+void RowStridedUnpack(
+ Int height, Int width,
   Int rowAlign, Int rowStride,
-  const T* A,         Int ALDim,
-        T* BPortions, Int portionSize );
-template<typename T>
-void StridedUnpack
-( Int height, Int width,
-  Int colAlign, Int colStride,
-  Int rowAlign, Int rowStride,
-  const T* APortions, Int portionSize,
-        T* B,         Int BLDim );
+  T const* APortions, Int portionSize,
+        T* B, Int BLDim,
+  SyncInfo<Device::GPU> );
+
+template <typename T, typename=EnableIf<IsStorageType<T,Device::GPU>>>
+void PartialRowStridedPack(
+    Int height, Int width,
+    Int rowAlign, Int rowStride,
+    Int rowStrideUnion, Int rowStridePart, Int rowRankPart,
+    Int rowShiftA,
+    T const* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<Device::GPU> );
+
+template <typename T, typename=EnableIf<IsStorageType<T,Device::GPU>>>
+void PartialRowStridedUnpack(
+    Int height, Int width,
+    Int rowAlign, Int rowStride,
+    Int rowStrideUnion, Int rowStridePart, Int rowRankPart,
+    Int rowShiftB,
+    const T* APortions, Int portionSize,
+    T* B, Int BLDim,
+    SyncInfo<Device::GPU> );
+
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>, typename=void>
+void InterleaveMatrix(
+    Int const&, Int const&,
+    T const*, Int const&, Int const&,
+    T const*, Int const&, Int const&,
+    SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>, typename=void>
+void RowStridedPack(
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, Int const&, T const*, Int const&,
+    SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>, typename=void>
+void RowStridedUnpack(
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, Int const&, T const*, Int const&,
+    SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>, typename=void>
+void PartialRowStridedPack(
+    Int const&, Int const&, Int const&, Int const&,
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, Int const&, T const*, Int const&,
+    SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>, typename=void>
+void PartialRowStridedUnpack(
+    Int const&, Int const&, Int const&, Int const&,
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, Int const&, T const*, Int const&,
+    SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>,
+          typename=void>
+void PartialColStridedColumnPack(
+    Int const&, Int const&, Int const&,
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, T const*, Int const&,
+    SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>,
+          typename=void>
+void ColStridedPack(
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, Int const&, T const*, Int const&, SyncInfo<D> const&);
+
+template <typename T, Device D,
+          typename=DisableIf<IsStorageType<T,D>>,
+          typename=void>
+void ColStridedUnpack(
+    Int const&, Int const&, Int const&, Int const&,
+    T const*, Int const&, T const*, Int const&, SyncInfo<D> const&);
+
+template <typename T, Device D, typename=EnableIf<IsStorageType<T,D>>>
+void ColStridedPack(
+    Int height, Int width,
+    Int colAlign, Int colStride,
+    T const* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<D>);
+
+template <typename T, Device D, typename=EnableIf<IsStorageType<T,D>>>
+void ColStridedColumnPack(
+    Int height,
+    Int colAlign, Int colStride,
+    T const* A,
+    T* BPortions, Int portionSize,
+    SyncInfo<D> );
+
+template<typename T, Device D=Device::CPU,
+         typename=EnableIf<IsStorageType<T,D>>>
+void ColStridedUnpack(
+    Int height, Int width,
+    Int colAlign, Int colStride,
+    T const* APortions, Int portionSize,
+    T* B, Int BLDim,
+    SyncInfo<D> );
+
+template <typename T, Device D=Device::CPU,
+         typename=EnableIf<IsStorageType<T,D>>>
+void PartialColStridedPack(
+    Int height, Int width,
+    Int colAlign, Int colStride,
+    Int colStrideUnion, Int colStridePart, Int colRankPart,
+    Int colShiftA,
+    T const* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<D> );
+
+template <typename T, Device D=Device::CPU,
+          typename=EnableIf<IsStorageType<T,D>>>
+void PartialColStridedUnpack(
+    Int height, Int width,
+    Int colAlign, Int colStride,
+    Int colStrideUnion, Int colStridePart, Int colRankPart,
+    Int colShiftB,
+    T const* APortions, Int portionSize,
+    T* B, Int BLDim,
+    SyncInfo<D> );
+
+template <typename T, Device D,
+          typename=EnableIf<IsStorageType<T,D>>>
+void PartialColStridedColumnPack(
+    Int height,
+    Int colAlign, Int colStride,
+    Int colStrideUnion, Int colStridePart, Int colRankPart,
+    Int colShiftA,
+    T const* A,
+    T* BPortions, Int portionSize,
+    SyncInfo<D>);
+
+template <typename T, Device D,
+          typename=EnableIf<IsStorageType<T,D>>>
+void PartialColStridedColumnUnpack(
+    Int height,
+    Int colAlign, Int colStride,
+    Int colStrideUnion, Int colStridePart, Int colRankPart,
+    Int colShiftB,
+    T const* APortions, Int portionSize,
+    T* B, SyncInfo<D> );
+
+template<typename T, Device D,
+         typename=EnableIf<IsStorageType<T,D>>>
+void StridedPack(
+    Int height, Int width,
+    Int colAlign, Int colStride,
+    Int rowAlign, Int rowStride,
+    T const* A, Int ALDim,
+    T* BPortions, Int portionSize,
+    SyncInfo<D> );
+
+template<typename T, Device D,
+         typename=EnableIf<IsStorageType<T,D>>>
+void StridedUnpack(
+    Int height, Int width,
+    Int colAlign, Int colStride,
+    Int rowAlign, Int rowStride,
+    T const* APortions, Int portionSize,
+    T* B, Int BLDim,
+    SyncInfo<D> );
+
 
 } // namespace util
 } // namespace copy
 
+} // namespace El
+
+#include "Copy.hpp"
+
+namespace El
+{
+
 // DiagonalScale
 // =============
-template<typename TDiag,typename T>
+#ifdef HYDROGEN_HAVE_GPU
+template<typename T, typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
 void DiagonalScale
 ( LeftOrRight side, Orientation orientation,
-  const Matrix<TDiag>& d, Matrix<T>& A );
+  Matrix<T,Device::GPU> const& d, Matrix<T,Device::GPU>& A );
+template<typename T, typename=DisableIf<IsDeviceValidType<T,Device::GPU>>,
+         typename=void>
+void DiagonalScale
+( LeftOrRight side, Orientation orientation,
+  Matrix<T,Device::GPU> const& d, Matrix<T,Device::GPU>& A );
+#endif // HYDROGEN_HAVE_GPU
 
-template<typename TDiag,typename T,Dist U,Dist V,DistWrap wrapType=ELEMENT>
-void DiagonalScale
-( LeftOrRight side, Orientation orientation,
-  const AbstractDistMatrix<TDiag>& d, DistMatrix<T,U,V,wrapType>& A );
+template<typename TDiag,typename T>
+void DiagonalScale(
+    LeftOrRight side, Orientation orientation,
+    Matrix<TDiag, Device::CPU> const& d, Matrix<T, Device::CPU>& A );
+
+template<typename T>
+void DiagonalScale(
+    LeftOrRight side, Orientation orientation,
+    AbstractMatrix<T> const& d, AbstractMatrix<T>& A );
+
+template<typename TDiag, typename T, Dist U, Dist V,
+         DistWrap wrapType=ELEMENT,
+         Device D=Device::CPU,
+         typename=EnableIf<And<IsDeviceValidType<T,D>,IsDeviceValidType<TDiag,D>>>>
+void DiagonalScale(
+    LeftOrRight side, Orientation orientation,
+    const AbstractDistMatrix<TDiag>& d, DistMatrix<T,U,V,wrapType,D>& A);
+
+template<typename TDiag, typename T, Dist U, Dist V,
+         DistWrap wrapType=ELEMENT,
+         Device D=Device::CPU,
+         typename=DisableIf<And<IsDeviceValidType<T,D>,IsDeviceValidType<TDiag,D>>>,
+         typename=void>
+void DiagonalScale(
+    LeftOrRight side, Orientation orientation,
+    const AbstractDistMatrix<TDiag>& d, DistMatrix<T,U,V,wrapType,D>& A);
 
 template<typename TDiag,typename T>
 void DiagonalScale
 ( LeftOrRight side, Orientation orientation,
   const AbstractDistMatrix<TDiag>& d, AbstractDistMatrix<T>& A );
-
-template<typename TDiag,typename T>
-void DiagonalScale
-( LeftOrRight side, Orientation orientation,
-  const Matrix<TDiag>& d, SparseMatrix<T>& A );
-
-template<typename TDiag,typename T>
-void DiagonalScale
-( LeftOrRight side, Orientation orientation,
-  const DistMultiVec<TDiag>& d, DistSparseMatrix<T>& A );
-
-template<typename TDiag,typename T>
-void DiagonalScale
-( LeftOrRight side, Orientation orientation,
-  const DistMultiVec<TDiag>& d, DistMultiVec<T>& X );
 
 // DiagonalScaleTrapezoid
 // ======================
@@ -733,16 +779,6 @@ void DiagonalScaleTrapezoid
 ( LeftOrRight side, UpperOrLower uplo, Orientation orientation,
   const AbstractDistMatrix<TDiag>& d,
         AbstractDistMatrix<T>& A, Int offset=0 );
-
-template<typename TDiag,typename T>
-void DiagonalScaleTrapezoid
-( LeftOrRight side, UpperOrLower uplo, Orientation orientation,
-  const Matrix<TDiag>& d, SparseMatrix<T>& A, Int offset=0 );
-
-template<typename TDiag,typename T>
-void DiagonalScaleTrapezoid
-( LeftOrRight side, UpperOrLower uplo, Orientation orientation,
-  const DistMultiVec<TDiag>& d, DistSparseMatrix<T>& A, Int offset=0 );
 
 // DiagonalSolve
 // =============
@@ -773,38 +809,14 @@ void DiagonalSolve
         AbstractDistMatrix<Field>& A,
   bool checkIfSingular=true );
 
-template<typename FieldDiag,typename Field>
-void DiagonalSolve
-( LeftOrRight side, Orientation orientation,
-  const Matrix<FieldDiag>& d, SparseMatrix<Field>& A,
-  bool checkIfSingular=true );
-template<typename Field>
-void SymmetricDiagonalSolve
-( const Matrix<Base<Field>>& d, SparseMatrix<Field>& A );
-
-template<typename FieldDiag,typename Field>
-void DiagonalSolve
-( LeftOrRight side, Orientation orientation,
-  const DistMultiVec<FieldDiag>& d, DistSparseMatrix<Field>& A,
-  bool checkIfSingular=true );
-template<typename Field>
-void SymmetricDiagonalSolve
-( const DistMultiVec<Base<Field>>& d, DistSparseMatrix<Field>& A );
-
-template<typename FieldDiag,typename Field>
-void DiagonalSolve
-( LeftOrRight side, Orientation orientation,
-  const DistMultiVec<FieldDiag>& d, DistMultiVec<Field>& X,
-  bool checkIfSingular=true );
-
 // Dot
 // ===
+template<typename T, Device D>
+T Dot( const Matrix<T, D>& A, const Matrix<T, D>& B );
 template<typename T>
-T Dot( const Matrix<T>& A, const Matrix<T>& B );
+T Dot( const AbstractMatrix<T>& A, const AbstractMatrix<T>& B );
 template<typename T>
 T Dot( const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& B );
-template<typename T>
-T Dot( const DistMultiVec<T>& A, const DistMultiVec<T>& B );
 
 // Dotu
 // ====
@@ -812,8 +824,6 @@ template<typename T>
 T Dotu( const Matrix<T>& A, const Matrix<T>& B );
 template<typename T>
 T Dotu( const ElementalMatrix<T>& A, const ElementalMatrix<T>& B );
-template<typename T>
-T Dotu( const DistMultiVec<T>& A, const DistMultiVec<T>& B );
 
 // EntrywiseFill
 // =============
@@ -821,53 +831,32 @@ template<typename T>
 void EntrywiseFill( Matrix<T>& A, function<T(void)> func );
 template<typename T>
 void EntrywiseFill( AbstractDistMatrix<T>& A, function<T(void)> func );
+#ifdef HYDROGEN_HAVE_GPU
 template<typename T>
-void EntrywiseFill( DistMultiVec<T>& A, function<T(void)> func );
+void EntrywiseFill( Matrix<T,Device::GPU>& A, function<T(void)> func );
+#endif // HYDROGEN_HAVE_GPU
 
 // EntrywiseMap
 // ============
 template<typename T>
-void EntrywiseMap( Matrix<T>& A, function<T(const T&)> func );
-template<typename T>
-void EntrywiseMap( SparseMatrix<T>& A, function<T(const T&)> func );
+void EntrywiseMap( AbstractMatrix<T>& A, function<T(const T&)> func );
 template<typename T>
 void EntrywiseMap( AbstractDistMatrix<T>& A, function<T(const T&)> func );
-template<typename T>
-void EntrywiseMap( DistSparseMatrix<T>& A, function<T(const T&)> func );
-template<typename T>
-void EntrywiseMap( DistMultiVec<T>& A, function<T(const T&)> func );
 
 template<typename S,typename T>
 void EntrywiseMap
-( const Matrix<S>& A, Matrix<T>& B, function<T(const S&)> func );
-template<typename S,typename T>
-void EntrywiseMap
-( const SparseMatrix<S>& A, SparseMatrix<T>& B, function<T(const S&)> func );
+( const AbstractMatrix<S>& A, AbstractMatrix<T>& B, function<T(const S&)> func );
 template<typename S,typename T>
 void EntrywiseMap
 ( const AbstractDistMatrix<S>& A, AbstractDistMatrix<T>& B,
-  function<T(const S&)> func );
-template<typename S,typename T>
-void EntrywiseMap
-( const DistSparseMatrix<S>& A, DistSparseMatrix<T>& B,
-  function<T(const S&)> func );
-template<typename S,typename T>
-void EntrywiseMap
-( const DistMultiVec<S>& A, DistMultiVec<T>& B,
   function<T(const S&)> func );
 
 // Fill
 // ====
 template<typename T>
-void Fill( Matrix<T>& A, T alpha );
+void Fill( AbstractMatrix<T>& A, T alpha );
 template<typename T>
 void Fill( AbstractDistMatrix<T>& A, T alpha );
-template<typename T>
-void Fill( DistMultiVec<T>& A, T alpha );
-template<typename T>
-void Fill( SparseMatrix<T>& A, T alpha );
-template<typename T>
-void Fill( DistSparseMatrix<T>& A, T alpha );
 
 // FillDiagonal
 // ============
@@ -875,15 +864,6 @@ template<typename T>
 void FillDiagonal( Matrix<T>& A, T alpha, Int offset=0 );
 template<typename T>
 void FillDiagonal( AbstractDistMatrix<T>& A, T alpha, Int offset=0 );
-
-// Full
-// ====
-template<typename T>
-Matrix<T> Full( const SparseMatrix<T>& A );
-// NOTE: A distributed version of the above does not exist because it is not
-//       yet clear how Elemental should currently handle creating a grid within
-//       a subroutine without causing a memory leak. DistMatrix may need to be
-//       modified to allow for ownership of a grid.
 
 // GetDiagonal
 // ===========
@@ -963,58 +943,7 @@ template<typename T,typename S,Dist U,Dist V>
 void GetMappedDiagonal
 ( const DistMatrix<T,U,V,BLOCK>& A, AbstractDistMatrix<S>& d,
   function<S(const T&)> func, Int offset=0 );
-template<typename T,typename S>
-void GetMappedDiagonal
-( const SparseMatrix<T>& A, Matrix<S>& d,
-  function<S(const T&)> func, Int offset=0 );
-template<typename T,typename S>
-void GetMappedDiagonal
-( const DistSparseMatrix<T>& A, DistMultiVec<S>& d,
-  function<S(const T&)> func, Int offset=0 );
 
-// GetSubgraph
-// ===========
-void GetSubgraph
-( const Graph& graph,
-        Range<Int> I,
-        Range<Int> J,
-        Graph& subgraph );
-void GetSubgraph
-( const Graph& graph,
-  const vector<Int>& I,
-        Range<Int> J,
-        Graph& subgraph );
-void GetSubgraph
-( const Graph& graph,
-        Range<Int> I,
-  const vector<Int>& J,
-        Graph& subgraph );
-void GetSubgraph
-( const Graph& graph,
-  const vector<Int>& I,
-  const vector<Int>& J,
-        Graph& subgraph );
-
-void GetSubgraph
-( const DistGraph& graph,
-        Range<Int> I,
-        Range<Int> J,
-        DistGraph& subgraph );
-void GetSubgraph
-( const DistGraph& graph,
-  const vector<Int>& I,
-        Range<Int> J,
-        DistGraph& subgraph );
-void GetSubgraph
-( const DistGraph& graph,
-        Range<Int> I,
-  const vector<Int>& J,
-        DistGraph& subgraph );
-void GetSubgraph
-( const DistGraph& graph,
-  const vector<Int>& I,
-  const vector<Int>& J,
-        DistGraph& subgraph );
 
 // GetSubmatrix
 // ============
@@ -1074,105 +1003,24 @@ void GetSubmatrix
   const vector<Int>& J,
         AbstractDistMatrix<T>& ASub );
 
-template<typename T>
-void GetSubmatrix
-( const SparseMatrix<T>& A,
-        Range<Int> I,
-        Range<Int> J,
-        SparseMatrix<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const SparseMatrix<T>& A,
-        Range<Int> I,
-  const vector<Int>& J,
-        SparseMatrix<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const SparseMatrix<T>& A,
-  const vector<Int>& I,
-        Range<Int> J,
-        SparseMatrix<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const SparseMatrix<T>& A,
-  const vector<Int>& I,
-  const vector<Int>& J,
-        SparseMatrix<T>& ASub );
-
-template<typename T>
-void GetSubmatrix
-( const DistSparseMatrix<T>& A,
-        Range<Int> I,
-        Range<Int> J,
-        DistSparseMatrix<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const DistSparseMatrix<T>& A,
-        Range<Int> I,
-  const vector<Int>& J,
-        DistSparseMatrix<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const DistSparseMatrix<T>& A,
-  const vector<Int>& I,
-        Range<Int> J,
-        DistSparseMatrix<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const DistSparseMatrix<T>& A,
-  const vector<Int>& I,
-  const vector<Int>& J,
-        DistSparseMatrix<T>& ASub );
-
-template<typename T>
-void GetSubmatrix
-( const DistMultiVec<T>& A,
-        Range<Int> I,
-        Range<Int> J,
-        DistMultiVec<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const DistMultiVec<T>& A,
-        Range<Int> I,
-  const vector<Int>& J,
-        DistMultiVec<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const DistMultiVec<T>& A,
-  const vector<Int>& I,
-        Range<Int> J,
-        DistMultiVec<T>& ASub );
-template<typename T>
-void GetSubmatrix
-( const DistMultiVec<T>& A,
-  const vector<Int>& I,
-  const vector<Int>& J,
-        DistMultiVec<T>& ASub );
-
 // Hadamard
 // ========
 template<typename T>
-void Hadamard( const Matrix<T>& A, const Matrix<T>& B, Matrix<T>& C );
+void Hadamard( const AbstractMatrix<T>& A, const AbstractMatrix<T>& B,
+               AbstractMatrix<T>& C );
 template<typename T>
 void Hadamard
 ( const AbstractDistMatrix<T>& A,
   const AbstractDistMatrix<T>& B,
         AbstractDistMatrix<T>& C );
-template<typename T>
-void Hadamard
-( const DistMultiVec<T>& A,
-  const DistMultiVec<T>& B,
-        DistMultiVec<T>& C );
 
 // HilbertSchmidt
 // ==============
 template<typename T>
-T HilbertSchmidt( const Matrix<T>& A, const Matrix<T>& B );
+T HilbertSchmidt( const AbstractMatrix<T>& A, const AbstractMatrix<T>& B );
 template<typename T>
 T HilbertSchmidt
 ( const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& C );
-template<typename T>
-T HilbertSchmidt( const DistMultiVec<T>& A, const DistMultiVec<T>& B );
 
 // Imaginary part
 // ==============
@@ -1228,24 +1076,6 @@ void Kronecker( const Matrix<T>& A, const Matrix<T>& B, Matrix<T>& C );
 template<typename T>
 void Kronecker
 ( const Matrix<T>& A, const Matrix<T>& B, ElementalMatrix<T>& C );
-template<typename T>
-void Kronecker
-( const SparseMatrix<T>& A, const SparseMatrix<T>& B, SparseMatrix<T>& C );
-template<typename T>
-void Kronecker
-( const SparseMatrix<T>& A, const Matrix<T>& B, SparseMatrix<T>& C );
-template<typename T>
-void Kronecker
-( const Matrix<T>& A, const SparseMatrix<T>& B, SparseMatrix<T>& C );
-template<typename T>
-void Kronecker
-( const SparseMatrix<T>& A, const SparseMatrix<T>& B, DistSparseMatrix<T>& C );
-template<typename T>
-void Kronecker
-( const SparseMatrix<T>& A, const Matrix<T>& B, DistSparseMatrix<T>& C );
-template<typename T>
-void Kronecker
-( const Matrix<T>& A, const SparseMatrix<T>& B, DistSparseMatrix<T>& C );
 
 // MakeHermitian
 // =============
@@ -1253,11 +1083,6 @@ template<typename T>
 void MakeHermitian( UpperOrLower uplo, Matrix<T>& A );
 template<typename T>
 void MakeHermitian( UpperOrLower uplo, ElementalMatrix<T>& A );
-
-template<typename T>
-void MakeHermitian( UpperOrLower uplo, SparseMatrix<T>& A );
-template<typename T>
-void MakeHermitian( UpperOrLower uplo, DistSparseMatrix<T>& A );
 
 // MakeDiagonalReal
 // ================
@@ -1292,13 +1117,6 @@ template<typename T>
 void MakeSymmetric
 ( UpperOrLower uplo, ElementalMatrix<T>& A, bool conjugate=false );
 
-template<typename T>
-void MakeSymmetric
-( UpperOrLower uplo, SparseMatrix<T>& A, bool conjugate=false );
-template<typename T>
-void MakeSymmetric
-( UpperOrLower uplo, DistSparseMatrix<T>& A, bool conjugate=false );
-
 // MakeTrapezoidal
 // ===============
 template<typename T>
@@ -1306,11 +1124,6 @@ void MakeTrapezoidal( UpperOrLower uplo, Matrix<T>& A, Int offset=0 );
 template<typename T>
 void MakeTrapezoidal
 ( UpperOrLower uplo, AbstractDistMatrix<T>& A, Int offset=0 );
-
-template<typename T>
-void MakeTrapezoidal( UpperOrLower uplo, SparseMatrix<T>& A, Int offset=0 );
-template<typename T>
-void MakeTrapezoidal( UpperOrLower uplo, DistSparseMatrix<T>& A, Int offset=0 );
 
 // Max
 // ===
@@ -1351,9 +1164,6 @@ ValueInt<Real> VectorMaxLoc( const Matrix<Real>& x );
 template<typename Real,
          typename=EnableIf<IsReal<Real>>>
 ValueInt<Real> VectorMaxLoc( const AbstractDistMatrix<Real>& x );
-template<typename Real,
-         typename=EnableIf<IsReal<Real>>>
-ValueInt<Real> VectorMaxLoc( const DistMultiVec<Real>& x );
 
 // MaxAbs
 // ======
@@ -1361,19 +1171,11 @@ template<typename T>
 Base<T> MaxAbs( const Matrix<T>& A );
 template<typename T>
 Base<T> MaxAbs( const AbstractDistMatrix<T>& A );
-template<typename T>
-Base<T> MaxAbs( const SparseMatrix<T>& A );
-template<typename T>
-Base<T> MaxAbs( const DistSparseMatrix<T>& A );
 
 template<typename T>
 Base<T> SymmetricMaxAbs( UpperOrLower uplo, const Matrix<T>& A );
 template<typename T>
 Base<T> SymmetricMaxAbs( UpperOrLower uplo, const AbstractDistMatrix<T>& A );
-template<typename T>
-Base<T> SymmetricMaxAbs( UpperOrLower uplo, const SparseMatrix<T>& A );
-template<typename T>
-Base<T> SymmetricMaxAbs( UpperOrLower uplo, const DistSparseMatrix<T>& A );
 
 // MaxAbsLoc
 // =========
@@ -1386,10 +1188,6 @@ template<typename T>
 Entry<Base<T>> MaxAbsLoc( const Matrix<T>& A );
 template<typename T>
 Entry<Base<T>> MaxAbsLoc( const AbstractDistMatrix<T>& A );
-template<typename T>
-Entry<Base<T>> MaxAbsLoc( const SparseMatrix<T>& A );
-template<typename T>
-Entry<Base<T>> MaxAbsLoc( const DistSparseMatrix<T>& A );
 
 template<typename T>
 Entry<Base<T>>
@@ -1397,12 +1195,6 @@ SymmetricMaxAbsLoc( UpperOrLower uplo, const Matrix<T>& A );
 template<typename T>
 Entry<Base<T>>
 SymmetricMaxAbsLoc( UpperOrLower uplo, const AbstractDistMatrix<T>& A );
-template<typename T>
-Entry<Base<T>>
-SymmetricMaxAbsLoc( UpperOrLower uplo, const SparseMatrix<T>& A );
-template<typename T>
-Entry<Base<T>>
-SymmetricMaxAbsLoc( UpperOrLower uplo, const DistSparseMatrix<T>& A );
 
 // Min
 // ===
@@ -1428,9 +1220,6 @@ ValueInt<Real> VectorMinLoc( const Matrix<Real>& x );
 template<typename Real,
          typename=EnableIf<IsReal<Real>>>
 ValueInt<Real> VectorMinLoc( const AbstractDistMatrix<Real>& x );
-template<typename Real,
-         typename=EnableIf<IsReal<Real>>>
-ValueInt<Real> VectorMinLoc( const DistMultiVec<Real>& x );
 
 template<typename Real,
          typename=EnableIf<IsReal<Real>>>
@@ -1486,8 +1275,6 @@ template<typename Field>
 Base<Field> Nrm2( const Matrix<Field>& x );
 template<typename Field>
 Base<Field> Nrm2( const AbstractDistMatrix<Field>& x );
-template<typename Field>
-Base<Field> Nrm2( const DistMultiVec<Field>& x );
 
 // QuasiDiagonalScale
 // ==================
@@ -1619,17 +1406,6 @@ template<typename T>
 DistMatrix<T> Reshape
 ( Int m, Int n, const AbstractDistMatrix<T>& A );
 
-template<typename T>
-void Reshape( Int m, Int n, const SparseMatrix<T>& A, SparseMatrix<T>& B );
-template<typename T>
-SparseMatrix<T> Reshape( Int m, Int n, const SparseMatrix<T>& A );
-
-template<typename T>
-void Reshape
-( Int m, Int n, const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B );
-template<typename T>
-DistSparseMatrix<T> GetSubmatrix( Int m, Int n, const DistSparseMatrix<T>& A );
-
 // Transform2x2
 // ============
 
@@ -1737,37 +1513,31 @@ void RotateCols
 // Round
 // =====
 // Round each entry to the nearest integer
+template <typename T>
+void Round(AbstractMatrix<T>& A);
+
 template<typename T>
 void Round( Matrix<T>& A );
 template<>
 void Round( Matrix<Int>& A );
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<>
 void Round( Matrix<BigInt>& A );
 #endif
 template<typename T>
 void Round( AbstractDistMatrix<T>& A );
-template<typename T>
-void Round( DistMultiVec<T>& A );
-// TODO(poulson): Sparse matrix versions
 
 // Scale
 // =====
 // TODO(poulson): Force S=T?
 template<typename T,typename S>
-void Scale( S alpha, Matrix<T>& A );
+void Scale( S alpha, AbstractMatrix<T>& A );
 template<typename T,typename S>
 void Scale( S alpha, AbstractDistMatrix<T>& A );
-template<typename T,typename S>
-void Scale( S alpha, SparseMatrix<T>& A );
-template<typename T,typename S>
-void Scale( S alpha, DistSparseMatrix<T>& A );
-template<typename T,typename S>
-void Scale( S alpha, DistMultiVec<T>& A );
 
 template<typename Real,typename S,
          typename=EnableIf<IsReal<Real>>>
-void Scale( S alpha, Matrix<Real>& AReal, Matrix<Real>& AImag );
+void Scale( S alpha, AbstractMatrix<Real>& AReal, AbstractMatrix<Real>& AImag );
 template<typename Real,typename S,
          typename=EnableIf<IsReal<Real>>>
 void Scale
@@ -1781,18 +1551,6 @@ template<typename Field>
 void SafeScale
 ( Base<Field> numerator, Base<Field> denominator,
   AbstractDistMatrix<Field>& A );
-template<typename Field>
-void SafeScale
-( Base<Field> numerator, Base<Field> denominator,
-  SparseMatrix<Field>& A );
-template<typename Field>
-void SafeScale
-( Base<Field> numerator, Base<Field> denominator,
-  DistSparseMatrix<Field>& A );
-template<typename Field>
-void SafeScale
-( Base<Field> numerator, Base<Field> denominator,
-  DistMultiVec<Field>& A );
 
 template<typename Field>
 void SafeScaleTrapezoid
@@ -1802,18 +1560,6 @@ template<typename Field>
 void SafeScaleTrapezoid
 ( Base<Field> numerator, Base<Field> denominator,
   UpperOrLower uplo, AbstractDistMatrix<Field>& A, Int offset=0 );
-template<typename Field>
-void SafeScaleTrapezoid
-( Base<Field> numerator, Base<Field> denominator,
-  UpperOrLower uplo, SparseMatrix<Field>& A, Int offset=0 );
-template<typename Field>
-void SafeScaleTrapezoid
-( Base<Field> numerator, Base<Field> denominator,
-  UpperOrLower uplo, DistSparseMatrix<Field>& A, Int offset=0 );
-template<typename Field>
-void SafeScaleTrapezoid
-( Base<Field> numerator, Base<Field> denominator,
-  UpperOrLower uplo, DistMultiVec<Field>& A, Int offset=0 );
 
 template<typename Field>
 void SafeScaleHermitianTridiag
@@ -1827,12 +1573,6 @@ void ScaleTrapezoid( S alpha, UpperOrLower uplo, Matrix<T>& A, Int offset=0 );
 template<typename T,typename S>
 void ScaleTrapezoid
 ( S alpha, UpperOrLower uplo, AbstractDistMatrix<T>& A, Int offset=0 );
-template<typename T,typename S>
-void ScaleTrapezoid
-( S alpha, UpperOrLower uplo, SparseMatrix<T>& A, Int offset=0 );
-template<typename T,typename S>
-void ScaleTrapezoid
-( S alpha, UpperOrLower uplo, DistSparseMatrix<T>& A, Int offset=0 );
 
 // SetDiagonal
 // ===========
@@ -1932,8 +1672,6 @@ template<typename T,typename S>
 void Shift( Matrix<T>& A, S alpha );
 template<typename T,typename S>
 void Shift( AbstractDistMatrix<T>& A, S alpha );
-template<typename T,typename S>
-void Shift( DistMultiVec<T>& A, S alpha );
 
 // ShiftDiagonal
 // =============
@@ -1941,12 +1679,6 @@ template<typename T,typename S>
 void ShiftDiagonal( Matrix<T>& A, S alpha, Int offset=0 );
 template<typename T,typename S>
 void ShiftDiagonal( AbstractDistMatrix<T>& A, S alpha, Int offset=0 );
-template<typename T,typename S>
-void ShiftDiagonal
-( SparseMatrix<T>& A, S alpha, Int offset=0, bool existingDiag=false );
-template<typename T,typename S>
-void ShiftDiagonal
-( DistSparseMatrix<T>& A, S alpha, Int offset=0, bool existingDiag=false );
 
 // Transpose
 // =========
@@ -1955,6 +1687,21 @@ void Transpose
 ( const Matrix<T>& A,
         Matrix<T>& B,
   bool conjugate=false );
+#ifdef HYDROGEN_HAVE_GPU
+template<typename T,typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
+void Transpose
+( Matrix<T,Device::GPU> const& A,
+  Matrix<T,Device::GPU>& B,
+  bool conjugate=false );
+template<typename T,
+         typename=DisableIf<IsDeviceValidType<T,Device::GPU>>,
+         typename=void>
+void Transpose
+( Matrix<T,Device::GPU> const& A,
+  Matrix<T,Device::GPU>& B,
+  bool conjugate=false );
+#endif // HYDROGEN_HAVE_GPU
+
 template<typename T>
 void Transpose
 ( const ElementalMatrix<T>& A,
@@ -1969,16 +1716,6 @@ template<typename T>
 void Transpose
 ( const AbstractDistMatrix<T>& A,
         AbstractDistMatrix<T>& B,
-  bool conjugate=false );
-template<typename T>
-void Transpose
-( const SparseMatrix<T>& A,
-        SparseMatrix<T>& B,
-  bool conjugate=false );
-template<typename T>
-void Transpose
-( const DistSparseMatrix<T>& A,
-        DistSparseMatrix<T>& B,
   bool conjugate=false );
 
 // TransposeContract
@@ -1999,14 +1736,7 @@ void TransposeAxpy
 ( S alpha, const Matrix<T>& X, Matrix<T>& Y, bool conjugate=false );
 template<typename T,typename S>
 void TransposeAxpy
-( S alpha, const SparseMatrix<T>& X, SparseMatrix<T>& Y, bool conjugate=false );
-template<typename T,typename S>
-void TransposeAxpy
 ( S alpha, const ElementalMatrix<T>& X, ElementalMatrix<T>& Y,
-  bool conjugate=false );
-template<typename T,typename S>
-void TransposeAxpy
-( S alpha, const DistSparseMatrix<T>& X, DistSparseMatrix<T>& Y,
   bool conjugate=false );
 
 // TransposeAxpyContract
@@ -2045,32 +1775,6 @@ void UpdateImagPartOfDiagonal
 ( DistMatrix<T,U,V>& A, Base<T> alpha, const ElementalMatrix<Base<T>>& d,
   Int offset=0 );
 
-template<typename T>
-void UpdateDiagonal
-( SparseMatrix<T>& A, T alpha, const Matrix<T>& d, Int offset=0,
-  bool diagExists=false );
-template<typename T>
-void UpdateRealPartOfDiagonal
-( SparseMatrix<T>& A, Base<T> alpha, const Matrix<Base<T>>& d, Int offset=0,
-  bool diagExists=false );
-template<typename T>
-void UpdateImagPartOfDiagonal
-( SparseMatrix<T>& A, Base<T> alpha, const Matrix<Base<T>>& d, Int offset=0,
-  bool diagExists=false );
-
-template<typename T>
-void UpdateDiagonal
-( DistSparseMatrix<T>& A, T alpha,
-  const DistMultiVec<T>& d, Int offset=0, bool diagExists=false );
-template<typename T>
-void UpdateRealPartOfDiagonal
-( DistSparseMatrix<T>& A, Base<T> alpha,
-  const DistMultiVec<Base<T>>& d, Int offset=0, bool diagExists=false );
-template<typename T>
-void UpdateImagPartOfDiagonal
-( DistSparseMatrix<T>& A, Base<T> alpha,
-  const DistMultiVec<Base<T>>& d, Int offset=0, bool diagExists=false );
-
 // UpdateMappedDiagonal
 // ====================
 template<typename T,typename S>
@@ -2085,15 +1789,6 @@ template<typename T,typename S,Dist U,Dist V>
 void UpdateMappedDiagonal
 ( DistMatrix<T,U,V,BLOCK>& A, const AbstractDistMatrix<S>& d,
   function<void(T&,const S&)> func, Int offset=0 );
-
-template<typename T,typename S>
-void UpdateMappedDiagonal
-( SparseMatrix<T>& A, const Matrix<S>& d,
-  function<void(T&,const S&)> func, Int offset=0, bool diagExists=false );
-template<typename T,typename S>
-void UpdateMappedDiagonal
-( DistSparseMatrix<T>& A, const DistMultiVec<S>& d,
-  function<void(T&,const S&)> func, Int offset=0, bool diagExists=false );
 
 // UpdateSubmatrix
 // ===============
@@ -2111,15 +1806,13 @@ void UpdateSubmatrix
 // Zero
 // ====
 template<typename T>
-void Zero( Matrix<T>& A );
+void Zero_seq( AbstractMatrix<T>& A );
+template<typename T>
+void Zero_seq( AbstractDistMatrix<T>& A );
+template<typename T>
+void Zero( AbstractMatrix<T>& A );
 template<typename T>
 void Zero( AbstractDistMatrix<T>& A );
-template<typename T>
-void Zero( SparseMatrix<T>& A, bool clearMemory=true );
-template<typename T>
-void Zero( DistSparseMatrix<T>& A, bool clearMemory=true );
-template<typename T>
-void Zero( DistMultiVec<T>& A );
 
 // Givens rotations
 // ================
@@ -2132,7 +1825,6 @@ void Zero( DistMultiVec<T>& A );
 // This routine uses the stable approach suggested by Kahan and Demmel and
 // returns the value rho.
 //
-
 template<typename Real>
 Real Givens
 ( const Real& phi,

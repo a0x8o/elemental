@@ -147,7 +147,8 @@ void Transform2x2Rows
         for( Int jLoc=0; jLoc<nLoc; ++jLoc )
             buf[jLoc] = ABuf[i1Loc+jLoc*ALDim];
 
-        mpi::SendRecv( buf.data(), nLoc, rowOwner2, rowOwner2, A.ColComm() );
+        mpi::SendRecv( buf.data(), nLoc, rowOwner2, rowOwner2, A.ColComm(),
+                       SyncInfo<Device::CPU>{} );
 
         // TODO(poulson): Generalized Axpy?
         blas::Scal( nLoc, gamma11, &ABuf[i1Loc], ALDim );
@@ -160,7 +161,8 @@ void Transform2x2Rows
         for( Int jLoc=0; jLoc<nLoc; ++jLoc )
             buf[jLoc] = ABuf[i2Loc+jLoc*ALDim];
 
-        mpi::SendRecv( buf.data(), nLoc, rowOwner1, rowOwner1, A.ColComm() );
+        mpi::SendRecv( buf.data(), nLoc, rowOwner1, rowOwner1, A.ColComm(),
+                       SyncInfo<Device::CPU>{} );
 
         // TODO(poulson): Generalized Axpy?
         blas::Scal( nLoc, gamma22, &ABuf[i2Loc], ALDim );
@@ -235,7 +237,8 @@ void Transform2x2Cols
         for( Int iLoc=0; iLoc<mLoc; ++iLoc )
             buf[iLoc] = ABuf[iLoc+j1Loc*ALDim];
 
-        mpi::SendRecv( buf.data(), mLoc, colOwner2, colOwner2, A.RowComm() );
+        mpi::SendRecv( buf.data(), mLoc, colOwner2, colOwner2, A.RowComm(),
+                       SyncInfo<Device::CPU>{} );
 
         // TODO(poulson): Generalized Axpy?
         blas::Scal( mLoc, gamma11, &ABuf[j1Loc*ALDim], 1 );
@@ -247,7 +250,8 @@ void Transform2x2Cols
         for( Int iLoc=0; iLoc<mLoc; ++iLoc )
             buf[iLoc] = ABuf[iLoc+j2Loc*ALDim];
 
-        mpi::SendRecv( buf.data(), mLoc, colOwner1, colOwner1, A.RowComm() );
+        mpi::SendRecv( buf.data(), mLoc, colOwner1, colOwner1, A.RowComm(),
+                       SyncInfo<Device::CPU>{} );
 
         // TODO(poulson): Generalized Axpy?
         blas::Scal( mLoc, gamma22, &ABuf[j2Loc*ALDim], 1 );
@@ -303,6 +307,7 @@ void Transform2x2Cols
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

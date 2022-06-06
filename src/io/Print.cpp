@@ -21,6 +21,28 @@ void ConfigurePrecision( ostream& os )
 
 // Dense
 // =====
+template <typename T>
+void Print(AbstractMatrix<T> const& A, string title, ostream& os)
+{
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        Print(static_cast<Matrix<T,Device::CPU> const&>(A), title, os);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+    {
+        // Copy to host
+        Matrix<T,Device::CPU> A_CPU{
+            static_cast<Matrix<T,Device::GPU> const&>(A)};
+        Print(A_CPU, title, os);
+    }
+    break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Print: Bad device.");
+    }
+}
 
 template<typename T>
 void Print( const Matrix<T>& A, string title, ostream& os )
@@ -64,108 +86,6 @@ void Print
     }
 }
 
-template<typename T>
-void Print( const DistMultiVec<T>& X, string title, ostream& os )
-{
-    EL_DEBUG_CSE
-    Output("Entered DistMultiVec Print with title=",title);
-    if( X.Grid().Rank() == 0 )
-    {
-        Matrix<T> XLoc;
-        CopyFromRoot( X, XLoc );
-        Print( XLoc, title, os );
-    }
-    else
-    {
-        CopyFromNonRoot( X, 0 );
-    }
-}
-
-void Print( const Graph& graph, string title, ostream& os )
-{
-    EL_DEBUG_CSE
-
-    ostringstream msg;
-
-    graph.AssertConsistent();
-    if( title != "" )
-        msg << title << endl;
-    const Int numEdges = graph.NumEdges();
-    const Int* srcBuf = graph.LockedSourceBuffer();
-    const Int* tgtBuf = graph.LockedTargetBuffer();
-    for( Int e=0; e<numEdges; ++e )
-        msg << srcBuf[e] << " " << tgtBuf[e] << "\n";
-    msg << endl;
-    os << msg.str();
-}
-
-void Print( const DistGraph& graph, string title, ostream& os )
-{
-    EL_DEBUG_CSE
-    graph.AssertLocallyConsistent();
-    if( graph.Grid().Rank() == 0 )
-    {
-        Graph seqGraph;
-        CopyFromRoot( graph, seqGraph );
-        Print( seqGraph, title, os );
-    }
-    else
-    {
-        CopyFromNonRoot( graph, 0 );
-    }
-}
-
-template<typename T>
-void Print( const SparseMatrix<T>& A, string title, ostream& os )
-{
-    EL_DEBUG_CSE
-
-    ostringstream msg;
-
-    A.AssertConsistent();
-    if( title != "" )
-        msg << title << endl;
-
-    ConfigurePrecision<T>( msg );
-
-    const Int numEntries = A.NumEntries();
-    const Int* srcBuf = A.LockedSourceBuffer();
-    const Int* tgtBuf = A.LockedTargetBuffer();
-    const T* valBuf = A.LockedValueBuffer();
-    for( Int s=0; s<numEntries; ++s )
-        msg << srcBuf[s] << " " << tgtBuf[s] << " " << valBuf[s] << "\n";
-    msg << endl;
-
-    os << msg.str();
-}
-
-template<typename T>
-void Print( const DistSparseMatrix<T>& A, string title, ostream& os )
-{
-    EL_DEBUG_CSE
-    A.AssertLocallyConsistent();
-    if( A.Grid().Rank() == 0 )
-    {
-        SparseMatrix<T> ASeq;
-        CopyFromRoot( A, ASeq );
-        Print( ASeq, title, os );
-    }
-    else
-    {
-        CopyFromNonRoot( A, 0 );
-    }
-}
-
-// Multifrontal
-// ============
-
-void PrintLocal
-( const ldl::DistNodeInfo& info, string title, ostream& os )
-{
-    EL_DEBUG_CSE
-    LogicError("This routine needs to be rewritten");
-}
-
 // Utilities
 // =========
 
@@ -195,19 +115,20 @@ void Print( const vector<T>& x, string title, ostream& os )
   template void Print \
   ( const Matrix<T>& A, string title, ostream& os ); \
   template void Print \
-  ( const AbstractDistMatrix<T>& A, string title, ostream& os ); \
+  ( const AbstractMatrix<T>& A, string title, ostream& os ); \
   template void Print \
-  ( const DistMultiVec<T>& X, string title, ostream& os ); \
-  template void Print \
-  ( const SparseMatrix<T>& A, string title, ostream& os ); \
-  template void Print \
-  ( const DistSparseMatrix<T>& A, string title, ostream& os );
+  ( const AbstractDistMatrix<T>& A, string title, ostream& os );
+
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

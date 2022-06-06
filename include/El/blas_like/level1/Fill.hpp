@@ -9,35 +9,56 @@
 #ifndef EL_BLAS_FILL_HPP
 #define EL_BLAS_FILL_HPP
 
-namespace El {
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/blas/gpu/Fill.hpp>
+#endif
+
+namespace El
+{
 
 template<typename T>
-void Fill( Matrix<T>& A, T alpha )
+void Fill( AbstractMatrix<T>& A, T alpha )
 {
     EL_DEBUG_CSE
     const Int m = A.Height();
     const Int n = A.Width();
     T* ABuf = A.Buffer();
     const Int ALDim = A.LDim();
-
-    // Iterate over single loop if memory is contiguous. Otherwise
-    // iterate over double loop.
-    if( ALDim == m )
+    switch (A.GetDevice())
     {
-        for( Int i=0; i<m*n; ++i )
+    case Device::CPU:
+        // Iterate over single loop if memory is contiguous. Otherwise
+        // iterate over double loop.
+        if( n == 1 || ALDim == m )
         {
-            ABuf[i] = alpha;
-        }
-    }
-    else
-    {
-        for( Int j=0; j<n; ++j )
-        {
-            for( Int i=0; i<m; ++i )
+            EL_PARALLEL_FOR
+            for( Int i=0; i<m*n; ++i )
             {
-                ABuf[i+j*ALDim] = alpha;
+                ABuf[i] = alpha;
             }
         }
+        else
+        {
+            EL_PARALLEL_FOR_COLLAPSE2
+            for( Int j=0; j<n; ++j )
+            {
+                for( Int i=0; i<m; ++i )
+                {
+                    ABuf[i+j*ALDim] = alpha;
+                }
+            }
+        }
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        hydrogen::Fill_GPU_impl(
+            m, n, alpha, ABuf, ALDim,
+            SyncInfoFromMatrix(
+                static_cast<Matrix<T,Device::GPU>&>(A)));
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Bad device type in Fill");
     }
 }
 
@@ -48,48 +69,6 @@ void Fill( AbstractDistMatrix<T>& A, T alpha )
     Fill( A.Matrix(), alpha );
 }
 
-template<typename T>
-void Fill( DistMultiVec<T>& A, T alpha )
-{
-    EL_DEBUG_CSE
-    Fill( A.Matrix(), alpha );
-}
-
-template<typename T>
-void Fill( SparseMatrix<T>& A, T alpha )
-{
-    EL_DEBUG_CSE
-    const Int m = A.Height();
-    const Int n = A.Width();
-    Zero( A );
-    if( alpha != T(0) )
-    {
-        A.Reserve( m*n );
-        for( Int i=0; i<m; ++i )
-            for( Int j=0; j<n; ++j )
-                A.QueueUpdate( i, j, alpha );
-        A.ProcessQueues();
-    }
-}
-
-template<typename T>
-void Fill( DistSparseMatrix<T>& A, T alpha )
-{
-    EL_DEBUG_CSE
-    const Int m = A.Height();
-    const Int n = A.Width();
-    Zero( A );
-    if( alpha != T(0) )
-    {
-        const Int localHeight = A.LocalHeight();
-        A.Reserve( localHeight*n );
-        for( Int iLoc=0; iLoc<localHeight; ++iLoc )
-            for( Int j=0; j<n; ++j )
-                A.QueueLocalUpdate( iLoc, j, alpha );
-        A.ProcessLocalQueues();
-    }
-}
-
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
 # define EL_EXTERN
 #else
@@ -97,11 +76,8 @@ void Fill( DistSparseMatrix<T>& A, T alpha )
 #endif
 
 #define PROTO(T) \
-  EL_EXTERN template void Fill( Matrix<T>& A, T alpha ); \
-  EL_EXTERN template void Fill( AbstractDistMatrix<T>& A, T alpha ); \
-  EL_EXTERN template void Fill( DistMultiVec<T>& A, T alpha ); \
-  EL_EXTERN template void Fill( SparseMatrix<T>& A, T alpha ); \
-  EL_EXTERN template void Fill( DistSparseMatrix<T>& A, T alpha );
+  EL_EXTERN template void Fill( AbstractMatrix<T>& A, T alpha ); \
+  EL_EXTERN template void Fill( AbstractDistMatrix<T>& A, T alpha );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

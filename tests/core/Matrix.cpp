@@ -2,14 +2,14 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include <El.hpp>
 using namespace El;
 
-template<typename T> 
+template<typename T>
 void TestMatrix( Int m, Int n, Int ldim )
 {
     Output("Testing with ",TypeName<T>());
@@ -38,11 +38,11 @@ void TestMatrix( Int m, Int n, Int ldim )
     Output("passed");
 }
 
-int 
+int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    try 
+    try
     {
         const Int m = Input("--height","height of matrix",100);
         const Int n = Input("--width","width of matrix",100);
@@ -66,6 +66,10 @@ main( int argc, char* argv[] )
 #ifdef EL_HAVE_QUAD
             TestMatrix<Quad>( m, n, ldim );
             TestMatrix<Complex<Quad>>( m, n, ldim );
+#endif
+
+#ifdef HYDROGEN_HAVE_HALF
+            TestMatrix<cpu_half_type>( m, n, ldim );
 #endif
 
 #ifdef EL_HAVE_MPC

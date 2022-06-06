@@ -11,12 +11,42 @@
 
 namespace El {
 
+template <typename T, typename S>
+void TransposeAxpy(
+    S alphaS, AbstractMatrix<T> const& X, AbstractMatrix<T>& Y, bool conjugate)
+{
+    EL_DEBUG_CSE;
+    if (X.GetDevice() != Y.GetDevice())
+        LogicError("X and Y must have same device for TransposeAxpy.");
+
+    switch (X.GetDevice())
+    {
+    case Device::CPU:
+        TransposeAxpy(alphaS,
+                      static_cast<Matrix<T,Device::CPU> const&>(X),
+                      static_cast<Matrix<T,Device::CPU>&>(Y),
+                      conjugate);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        TransposeAxpy(alphaS,
+                      static_cast<Matrix<T,Device::GPU> const&>(X),
+                      static_cast<Matrix<T,Device::GPU>&>(Y),
+                      conjugate);
+
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Bad device for TransposeAxpy");
+    }
+}
+
 template<typename T,typename S>
 void TransposeAxpy
-(       S alphaS,
+(      S alphaS,
   const Matrix<T>& X,
         Matrix<T>& Y,
-        bool conjugate )
+        bool conjugate)
 {
     EL_DEBUG_CSE
     const T alpha = T(alphaS);
@@ -29,161 +59,172 @@ void TransposeAxpy
           T* YBuf = Y.Buffer();
     // If X and Y are vectors, we can allow one to be a column and the other
     // to be a row. Otherwise we force X and Y to be the same dimension.
-    if( mX == 1 || nX == 1 )
+    if(mX == 1 || nX == 1)
     {
-        const Int lengthX = ( nX==1 ? mX : nX );
-        const Int incX = ( nX==1 ? 1  : ldX );
-        const Int incY = ( nY==1 ? 1  : ldY );
-        EL_DEBUG_ONLY(
-          const Int mY = Y.Height();
-          const Int lengthY = ( nY==1 ? mY : nY );
-          if( lengthX != lengthY )
-              LogicError("Nonconformal TransposeAxpy");
-        )
-        if( conjugate )
-            for( Int j=0; j<lengthX; ++j )
+        const Int lengthX = (nX==1 ? mX : nX);
+        const Int incX = (nX==1 ? 1  : ldX);
+        const Int incY = (nY==1 ? 1  : ldY);
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+        const Int mY = Y.Height();
+        const Int lengthY = (nY==1 ? mY : nY);
+        if(lengthX != lengthY)
+            LogicError("Nonconformal TransposeAxpy");
+#endif // HYDROGEN_DO_BOUNDS_CHECKING
+        if(conjugate)
+            for(Int j=0; j<lengthX; ++j)
                 YBuf[j*incY] += alpha*Conj(XBuf[j*incX]);
         else
-            blas::Axpy( lengthX, alpha, XBuf, incX, YBuf, incY );
+            blas::Axpy(lengthX, alpha, XBuf, incX, YBuf, incY);
     }
     else
     {
-        EL_DEBUG_ONLY(
-          const Int mY = Y.Height();
-          if( mX != nY || nX != mY )
-              LogicError("Nonconformal TransposeAxpy");
-        )
-        if( nX <= mX )
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+        const Int mY = Y.Height();
+        if(mX != nY || nX != mY)
+            LogicError("Nonconformal TransposeAxpy");
+#endif // HYDROGEN_DO_BOUNDS_CHECKING
+        if(nX <= mX)
         {
-            if( conjugate )
-                for( Int j=0; j<nX; ++j )
-                    for( Int i=0; i<mX; ++i )
+            if(conjugate)
+                for(Int j=0; j<nX; ++j)
+                    for(Int i=0; i<mX; ++i)
                         YBuf[j+i*ldY] += alpha*Conj(XBuf[i+j*ldX]);
             else
-                for( Int j=0; j<nX; ++j )
-                    blas::Axpy( mX, alpha, &XBuf[j*ldX], 1, &YBuf[j], ldY );
+                for(Int j=0; j<nX; ++j)
+                    blas::Axpy(mX, alpha, &XBuf[j*ldX], 1, &YBuf[j], ldY);
         }
         else
         {
-            if( conjugate )
-                for( Int i=0; i<mX; ++i )
-                    for( Int j=0; j<nX; ++j )
+            if(conjugate)
+                for(Int i=0; i<mX; ++i)
+                    for(Int j=0; j<nX; ++j)
                         YBuf[j+i*ldY] += alpha*Conj(XBuf[i+j*ldX]);
             else
-                for( Int i=0; i<mX; ++i )
-                    blas::Axpy( nX, alpha, &XBuf[i], ldX, &YBuf[i*ldY], 1 );
+                for(Int i=0; i<mX; ++i)
+                    blas::Axpy(nX, alpha, &XBuf[i], ldX, &YBuf[i*ldY], 1);
         }
     }
 }
 
-template<typename T,typename S>
-void TransposeAxpy
-(       S alphaS,
-  const SparseMatrix<T>& X,
-        SparseMatrix<T>& Y,
-        bool conjugate )
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T, typename S,
+          typename=EnableIf<IsDeviceValidType<T,Device::GPU>>>
+void TransposeAxpy(S alphaS,
+                   Matrix<T,Device::GPU> const& X,
+                   Matrix<T,Device::GPU>& Y,
+                   bool conjugate)
 {
-    EL_DEBUG_CSE
-    if( X.Height() != Y.Width() || X.Width() != Y.Height() )
-        LogicError("X and Y must have transposed dimensions");
+    EL_DEBUG_CSE;
     const T alpha = T(alphaS);
-    const Int numEntries = X.NumEntries();
-    Y.Reserve( Y.NumEntries()+numEntries );
-    for( Int k=0; k<numEntries; ++k )
+    const Int mX = X.Height();
+    const Int nX = X.Width();
+    const Int nY = Y.Width();
+    const Int ldX = X.LDim();
+    const Int ldY = Y.LDim();
+    const T* XBuf = X.LockedBuffer();
+    T* YBuf = Y.Buffer();
+
+#ifndef EL_RELEASE
+    if (conjugate)
+        std::cerr << "TransposeAxpy: Conjugate not supported on GPU.\n"
+                  << "  However, the type should be real anyway." << std::endl;
+#endif // !EL_RELEASE
+
+    auto syncInfoX = SyncInfoFromMatrix(X),
+        syncInfoY = SyncInfoFromMatrix(Y);
+    auto syncHelper = MakeMultiSync(syncInfoY, syncInfoX);
+
+    // If X and Y are vectors, we can allow one to be a column and the other
+    // to be a row. Otherwise we force X and Y to be the same dimension.
+    if(mX == 1 || nX == 1)
     {
-        const T value = alpha*( conjugate ? Conj(X.Value(k)) : X.Value(k) );
-        Y.QueueUpdate( X.Col(k), X.Row(k), value );
+        const Int lengthX = (nX==1 ? mX : nX);
+        const Int incX = (nX==1 ? 1  : ldX);
+        const Int incY = (nY==1 ? 1  : ldY);
+#ifndef EL_RELEASE
+        const Int mY = Y.Height();
+        const Int lengthY = (nY==1 ? mY : nY);
+        if(lengthX != lengthY)
+            LogicError("Nonconformal TransposeAxpy");
+#endif // !EL_RELEASE
+
+        gpu_blas::Axpy(lengthX, alpha, XBuf, incX, YBuf, incY, syncInfoY);
     }
-    Y.ProcessQueues();
+    else
+    {
+#ifdef HYDROGEN_DO_BOUNDS_CHECKING
+        const Int mY = Y.Height();
+        if(mX != nY || nX != mY)
+            LogicError("Nonconformal TransposeAxpy");
+#endif // HYDROGEN_DO_BOUNDS_CHECKING
+
+        gpu_blas::Axpy(
+            (conjugate
+             ? TransposeMode::CONJ_TRANSPOSE
+             : TransposeMode::TRANSPOSE),
+            nX, mX, alpha, XBuf, ldX, YBuf, ldY, syncInfoY);
+    }
 }
+
+template <typename T, typename S,
+          typename=DisableIf<IsDeviceValidType<T,Device::GPU>>, typename=void>
+void TransposeAxpy (S alphaS,
+                    Matrix<T,Device::GPU> const& X,
+                    Matrix<T,Device::GPU>& Y,
+                    bool conjugate)
+{
+    LogicError("TransposeAxpy: Bad type/device combo.");
+}
+#endif // HYDROGEN_HAVE_GPU
 
 template<typename T,typename S>
 void TransposeAxpy
-(       S alphaS,
+(      S alphaS,
   const ElementalMatrix<T>& A,
         ElementalMatrix<T>& B,
-        bool conjugate )
+        bool conjugate)
 {
     EL_DEBUG_CSE
     EL_DEBUG_ONLY(
-      AssertSameGrids( A, B );
-      if( A.Height() != B.Width() || A.Width() != B.Height() )
+      AssertSameGrids(A, B);
+      if(A.Height() != B.Width() || A.Width() != B.Height())
           LogicError("A and B must have transposed dimensions");
-    )
+   )
     const T alpha = T(alphaS);
 
     const DistData& ADistData = A.DistData();
     const DistData& BDistData = B.DistData();
-    if( ADistData.colDist == BDistData.rowDist &&
+    if(ADistData.colDist == BDistData.rowDist &&
         ADistData.rowDist == BDistData.colDist &&
         ADistData.colAlign==BDistData.rowAlign &&
-        ADistData.rowAlign==BDistData.colAlign )
+        ADistData.rowAlign==BDistData.colAlign)
     {
-        TransposeAxpy( alpha, A.LockedMatrix(), B.Matrix(), conjugate );
+        TransposeAxpy(alpha, A.LockedMatrix(), B.Matrix(), conjugate);
     }
     else
     {
         unique_ptr<ElementalMatrix<T>>
-            C( B.ConstructTranspose(A.Grid(),A.Root()) );
-        C->AlignRowsWith( B.DistData() );
-        C->AlignColsWith( B.DistData() );
-        Copy( A, *C );
-        TransposeAxpy( alpha, C->LockedMatrix(), B.Matrix(), conjugate );
+            C(B.ConstructTranspose(A.Grid(),A.Root()));
+        C->AlignRowsWith(B.DistData());
+        C->AlignColsWith(B.DistData());
+        Copy(A, *C);
+        TransposeAxpy(alpha, C->LockedMatrix(), B.Matrix(), conjugate);
     }
 }
 
 template<typename T,typename S>
-void TransposeAxpy
-(       S alphaS,
-  const DistSparseMatrix<T>& A,
-        DistSparseMatrix<T>& B,
-        bool conjugate )
+void AdjointAxpy(S alphaS, const Matrix<T>& X, Matrix<T>& Y)
 {
     EL_DEBUG_CSE
-    if( A.Height() != B.Width() || A.Width() != B.Height() )
-        LogicError("A and B must have transposed dimensions");
-    if( A.Grid().Comm() != B.Grid().Comm() )
-        LogicError("A and B must have the same communicator");
-
-    const Int numLocalEntries = A.NumLocalEntries();
-
-    T alpha(alphaS);
-    B.Reserve( B.NumLocalEntries()+numLocalEntries, numLocalEntries );
-    for( Int e=0; e<numLocalEntries; ++e )
-        B.QueueUpdate
-        ( A.Col(e), A.Row(e),
-          alpha*(conjugate ? Conj(A.Value(e)) : A.Value(e)) );
-    B.ProcessQueues();
-}
-
-template<typename T,typename S>
-void AdjointAxpy( S alphaS, const Matrix<T>& X, Matrix<T>& Y )
-{
-    EL_DEBUG_CSE
-    TransposeAxpy( alphaS, X, Y, true );
-}
-
-template<typename T,typename S>
-void AdjointAxpy( S alphaS, const SparseMatrix<T>& X, SparseMatrix<T>& Y )
-{
-    EL_DEBUG_CSE
-    TransposeAxpy( alphaS, X, Y, true );
+    TransposeAxpy(alphaS, X, Y, true);
 }
 
 template<typename T,typename S>
 void AdjointAxpy
-( S alphaS, const ElementalMatrix<T>& X, ElementalMatrix<T>& Y )
+(S alphaS, const ElementalMatrix<T>& X, ElementalMatrix<T>& Y)
 {
     EL_DEBUG_CSE
-    TransposeAxpy( alphaS, X, Y, true );
-}
-
-template<typename T,typename S>
-void AdjointAxpy
-( S alphaS, const DistSparseMatrix<T>& X, DistSparseMatrix<T>& Y )
-{
-    EL_DEBUG_CSE
-    TransposeAxpy( alphaS, X, Y, true );
+    TransposeAxpy(alphaS, X, Y, true);
 }
 
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
@@ -194,41 +235,28 @@ void AdjointAxpy
 
 #define PROTO_TYPES(T,S) \
   EL_EXTERN template void TransposeAxpy \
-  (       S alpha, \
+  (      S alpha, \
+    const AbstractMatrix<T>& A, \
+          AbstractMatrix<T>& B, \
+          bool conjugate); \
+  EL_EXTERN template void TransposeAxpy \
+  (      S alpha, \
     const Matrix<T>& A, \
           Matrix<T>& B, \
-          bool conjugate ); \
+          bool conjugate); \
   EL_EXTERN template void TransposeAxpy \
-  (       S alpha, \
+  (      S alpha, \
     const ElementalMatrix<T>& A, \
           ElementalMatrix<T>& B, \
-          bool conjugate ); \
-  EL_EXTERN template void TransposeAxpy \
-  (       S alpha, \
-    const SparseMatrix<T>& A, \
-          SparseMatrix<T>& B, \
-          bool conjugate ); \
-  EL_EXTERN template void TransposeAxpy \
-  (       S alpha, \
-    const DistSparseMatrix<T>& A, \
-          DistSparseMatrix<T>& B, \
-          bool conjugate ); \
+          bool conjugate); \
   EL_EXTERN template void AdjointAxpy \
-  (       S alpha, \
+  (      S alpha, \
     const Matrix<T>& A, \
-          Matrix<T>& B ); \
+          Matrix<T>& B); \
   EL_EXTERN template void AdjointAxpy \
-  (       S alpha, \
+  (      S alpha, \
     const ElementalMatrix<T>& A, \
-          ElementalMatrix<T>& B ); \
-  EL_EXTERN template void AdjointAxpy \
-  (       S alpha, \
-    const SparseMatrix<T>& A, \
-          SparseMatrix<T>& B ); \
-  EL_EXTERN template void AdjointAxpy \
-  (       S alpha, \
-    const DistSparseMatrix<T>& A, \
-          DistSparseMatrix<T>& B );
+          ElementalMatrix<T>& B);
 
 #define PROTO_INT(T) PROTO_TYPES(T,T)
 

@@ -221,6 +221,9 @@ Dist StringToDist( std::string s );
 using namespace DistNS;
 typedef Dist Distribution;
 
+template <Dist U, Dist V> struct SameDist : std::false_type {};
+template <Dist U> struct SameDist<U,U> : std::true_type {};
+
 namespace DistWrapNS {
 enum DistWrap {
     ELEMENT,
@@ -419,6 +422,17 @@ enum LeftOrRight
 };
 char LeftOrRightToChar( LeftOrRight side );
 LeftOrRight CharToLeftOrRight( char c );
+inline SideMode LeftOrRightToSideMode(LeftOrRight side)
+{
+    switch (side)
+    {
+    case LEFT:
+        return SideMode::LEFT;
+    case RIGHT:
+        return SideMode::RIGHT;
+    }
+    return SideMode::LEFT;
+}
 }
 using namespace LeftOrRightNS;
 
@@ -455,6 +469,19 @@ enum Orientation
 };
 char OrientationToChar( Orientation orientation );
 Orientation CharToOrientation( char c );
+inline TransposeMode OrientationToTransposeMode(Orientation orientation)
+{
+    switch (orientation)
+    {
+    case NORMAL:
+        return TransposeMode::NORMAL;
+    case TRANSPOSE:
+        return TransposeMode::TRANSPOSE;
+    case ADJOINT:
+        return TransposeMode::CONJ_TRANSPOSE;
+    }
+    return TransposeMode::NORMAL; // Silence warning
+}
 }
 using namespace OrientationNS;
 
@@ -466,6 +493,17 @@ enum UnitOrNonUnit
 };
 char UnitOrNonUnitToChar( UnitOrNonUnit diag );
 UnitOrNonUnit CharToUnitOrNonUnit( char c );
+inline DiagType UnitOrNonUnitToDiagType(UnitOrNonUnit diag)
+{
+    switch (diag)
+    {
+    case NON_UNIT:
+        return DiagType::NON_UNIT;
+    case UNIT:
+        return DiagType::UNIT;
+    }
+    return DiagType::UNIT;
+}
 }
 using namespace UnitOrNonUnitNS;
 
@@ -477,6 +515,17 @@ enum UpperOrLower
 };
 char UpperOrLowerToChar( UpperOrLower uplo );
 UpperOrLower CharToUpperOrLower( char c );
+inline FillMode UpperOrLowerToFillMode(UpperOrLower uplo)
+{
+    switch (uplo)
+    {
+    case LOWER:
+        return FillMode::LOWER_TRIANGLE;
+    case UPPER:
+        return FillMode::UPPER_TRIANGLE;
+    }
+    return FillMode::FULL;
+}
 }
 using namespace UpperOrLowerNS;
 
@@ -510,6 +559,7 @@ enum FileFormat
 };
 }
 using namespace FileFormatNS;
+
 
 } // namespace El
 

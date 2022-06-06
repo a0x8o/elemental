@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_RANDOM_DECL_HPP
@@ -34,6 +34,11 @@ Int CoinFlip();
 template<typename T>
 T UnitCell();
 
+#ifdef HYDROGEN_HAVE_HALF
+cpu_half_type SampleUniform(
+    cpu_half_type const& a=0._h, cpu_half_type const& b=1._h);
+#endif
+
 template<typename Real=double,typename=EnableIf<IsReal<Real>>>
 Real SampleUniformNaive
 ( const Real& a=Real(0), const Real& b=UnitCell<Real>() );
@@ -55,21 +60,29 @@ template<typename F,
          typename=EnableIf<IsComplex<F>>>
 F SampleUniform( const F& a=F(0), const F& b=UnitCell<F>() );
 
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 // __float128 is usually first-class in the STL, but not here :-(
 template<>
 Quad SampleUniform( const Quad& a, const Quad& b );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<>
 BigFloat SampleUniform( const BigFloat& a, const BigFloat& b );
 #endif
+
+#ifdef HYDROGEN_GPU_USE_FP16
+inline gpu_half_type
+SampleUniform(gpu_half_type const& a, gpu_half_type const& b)
+{
+    return SampleUniform(float(a), float(b));
+}
+#endif // HYDROGEN_GPU_USE_FP16
 
 template<typename T,typename=EnableIf<IsIntegral<T>>,typename=void>
 T SampleUniform( const T& a, const T& b );
 template<>
 Int SampleUniform( const Int& a, const Int& b );
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<>
 BigInt SampleUniform( const BigInt& a, const BigInt& b );
 #endif
@@ -84,7 +97,7 @@ T SampleNormal( const T& mean=T(0), const Base<T>& stddev=Base<T>(1) );
 template<typename T,typename=DisableIf<IsStdScalar<T>>,typename=void>
 T SampleNormal( const T& mean=T(0), const Base<T>& stddev=Base<T>(1) );
 
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 // __float128 is usually first-class in the STL, but not here :-(
 template<>
 Quad SampleNormal( const Quad& mean, const Quad& stddev );
@@ -92,11 +105,11 @@ template<>
 Complex<Quad> SampleNormal( const Complex<Quad>& mean, const Quad& stddev );
 #endif
 
-// Generate a sample from a uniform PDF over the (closed) unit ball about the 
+// Generate a sample from a uniform PDF over the (closed) unit ball about the
 // additive identity of the ring T using the most natural metric.
-template<typename F> 
+template<typename F>
 F SampleBall( const F& center=F(0), const Base<F>& radius=Base<F>(1) );
-template<typename Real,typename=EnableIf<IsReal<Real>>> 
+template<typename Real,typename=EnableIf<IsReal<Real>>>
 Real SampleBall( const Real& center=Real(0), const Real& radius=Real(1) );
 
 // To be used internally by Elemental

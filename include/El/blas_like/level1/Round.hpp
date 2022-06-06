@@ -12,6 +12,23 @@
 namespace El {
 
 // TODO(poulson): Sparse matrix versions
+template <typename T>
+void Round(AbstractMatrix<T>& A)
+{
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        Round(static_cast<Matrix<T,Device::CPU>&>(A));
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        Round(static_cast<Matrix<T,Device::GPU>&>(A));
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Invalid device type.");
+    }
+}
 
 template<typename T>
 void Round( Matrix<T>& A )
@@ -24,19 +41,30 @@ void Round( Matrix<T>& A )
 template<>
 inline void Round( Matrix<Int>& /*A*/ )
 { }
+#ifdef EL_INSTANTIATE_BLAS_LEVEL1
+#define PROTO_INT
+#define EL_NO_INT_PROTO
+#endif
 
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<>
 inline void Round( Matrix<BigInt>& /*A*/ )
 { }
+#ifdef EL_INSTANTIATE_BLAS_LEVEL1
+#define PROTO_BIGINT
+#ifndef EL_NO_INT_PROTO
+#define EL_NO_INT_PROTO
+#endif
+#endif
 #endif
 
 template<typename T>
 void Round( AbstractDistMatrix<T>& A )
 { Round( A.Matrix() ); }
 
-template<typename T>
-void Round( DistMultiVec<T>& A )
+// FIXME
+template<>
+inline void Round( AbstractDistMatrix<Int>& A )
 { Round( A.Matrix() ); }
 
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
@@ -47,8 +75,7 @@ void Round( DistMultiVec<T>& A )
 
 #define PROTO(T) \
   EL_EXTERN template void Round( Matrix<T>& A ); \
-  EL_EXTERN template void Round( AbstractDistMatrix<T>& A ); \
-  EL_EXTERN template void Round( DistMultiVec<T>& A );
+  EL_EXTERN template void Round( AbstractDistMatrix<T>& A );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

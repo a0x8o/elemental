@@ -13,6 +13,7 @@ using namespace El;
 template <typename T, DistWrap W>
 void TestColumnTwoNorms(Int m, Int n, const Grid& g, bool print)
 {
+  El::Output("Testing TestColumnTwoNorms with ",El::TypeName<T>());
   // Generate random matrix to test.
   DistMatrix<T, MC, MR, W> A(g);
   Uniform(A, m, n);
@@ -25,17 +26,18 @@ void TestColumnTwoNorms(Int m, Int n, const Grid& g, bool print)
   for (Int j = 0; j < A.LocalWidth(); ++j)
   {
     T got = norms.GetLocal(j, 0);
-    T expected = 0;
+    T expected{0};
     for (Int i = 0; i < A.LocalHeight(); ++i)
     {
       T val = A.GetLocal(i, j);
       expected += val * val;
     }
-    expected = mpi::AllReduce(expected, g.ColComm());
+    expected = mpi::AllReduce(expected, g.ColComm(),
+                              SyncInfoFromMatrix(A.LockedMatrix()));
     expected = Sqrt(expected);
     // Compute max(expected, 1) to use relative bound.
     // (std::max and El::Max don't support BigFloat.
-    T div = expected > 1 ? expected : 1;
+    T div = expected > 1 ? expected : T(1);
     if (Abs(got - expected) / div > m * n * 10 * limits::Epsilon<El::Base<T>>())
     {
       Output("Results do not match, norms(", j, ")=", got,
@@ -48,6 +50,7 @@ void TestColumnTwoNorms(Int m, Int n, const Grid& g, bool print)
 template <typename T, DistWrap W>
 void TestColumnMaxNorms(Int m, Int n, const Grid& g, bool print)
 {
+  El::Output("Testing TestColumnMaxNorms with ",El::TypeName<T>());
   // Generate random matrix to test.
   DistMatrix<T, MC, MR, W> A(g);
   Uniform(A, m, n);
@@ -60,11 +63,12 @@ void TestColumnMaxNorms(Int m, Int n, const Grid& g, bool print)
   for (Int j = 0; j < A.LocalWidth(); ++j)
   {
     T got = norms.GetLocal(j, 0);
-    T expected = 0;
+    T expected{0};
     for (Int i = 0; i < A.LocalHeight(); ++i)
       expected = Max(expected, Abs(A.GetLocal(i, j)));
     T r;
-    mpi::AllReduce(&expected, &r, 1, mpi::MAX, g.ColComm());
+    mpi::AllReduce(&expected, &r, 1, mpi::MAX, g.ColComm(),
+                   SyncInfoFromMatrix(A.LockedMatrix()));
     expected = r;
     if (got != expected)
     {
@@ -78,7 +82,7 @@ void TestColumnMaxNorms(Int m, Int n, const Grid& g, bool print)
 int main(int argc, char** argv)
 {
   Environment env(argc, argv);
-  mpi::Comm comm = mpi::COMM_WORLD;
+  mpi::Comm comm = mpi::NewWorldComm();
   try
   {
     const Int m = Input("--m", "height", 100);
@@ -87,8 +91,8 @@ int main(int argc, char** argv)
     ProcessInput();
     PrintInputReport();
 
-    const Grid g(comm);
-    OutputFromRoot(comm, "Testing ColumnTwoNorms");
+    const Grid g(std::move(comm));
+    OutputFromRoot(g.Comm(), "Testing ColumnTwoNorms");
     TestColumnTwoNorms<float, ELEMENT>(m, n, g, print);
     TestColumnTwoNorms<float, BLOCK>(m, n, g, print);
     TestColumnTwoNorms<double, ELEMENT>(m, n, g, print);
@@ -103,11 +107,15 @@ int main(int argc, char** argv)
     TestColumnTwoNorms<Quad, ELEMENT>(m, n, g, print);
     TestColumnTwoNorms<Quad, BLOCK>(m, n, g, print);
 #endif
+#if defined(HYDROGEN_HAVE_HALF)
+    TestColumnTwoNorms<cpu_half_type, ELEMENT>(m, n, g, print);
+    TestColumnTwoNorms<cpu_half_type, BLOCK>(m, n, g, print);
+#endif
 #if defined(EL_HAVE_MPC)
     TestColumnTwoNorms<BigFloat, ELEMENT>(m, n, g, print);
     TestColumnTwoNorms<BigFloat, BLOCK>(m, n, g, print);
 #endif
-    OutputFromRoot(comm, "Testing ColumnMaxNorms");
+    OutputFromRoot(g.Comm(), "Testing ColumnMaxNorms");
     TestColumnMaxNorms<float, ELEMENT>(m, n, g, print);
     TestColumnMaxNorms<float, BLOCK>(m, n, g, print);
     TestColumnMaxNorms<double, ELEMENT>(m, n, g, print);
@@ -121,6 +129,10 @@ int main(int argc, char** argv)
 #if defined(EL_HAVE_QUAD)
     TestColumnMaxNorms<Quad, ELEMENT>(m, n, g, print);
     TestColumnMaxNorms<Quad, BLOCK>(m, n, g, print);
+#endif
+#if defined(HYDROGEN_HAVE_HALF)
+    TestColumnMaxNorms<cpu_half_type, ELEMENT>(m, n, g, print);
+    TestColumnMaxNorms<cpu_half_type, BLOCK>(m, n, g, print);
 #endif
 #if defined(EL_HAVE_MPC)
     TestColumnMaxNorms<BigFloat, ELEMENT>(m, n, g, print);

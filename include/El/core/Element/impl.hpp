@@ -84,8 +84,9 @@ void RealPart( const Complex<Real>& alpha, Real& alphaReal ) EL_NO_EXCEPT
 
 template<typename Real,
          typename/*=EnableIf<IsReal<Real>>*/>
-Real ImagPart( const Real& alpha ) EL_NO_EXCEPT
-{ return 0; }
+Real ImagPart( Real const& ) EL_NO_EXCEPT
+{ return TypeTraits<Real>::Zero(); }
+
 template<typename Real>
 Real ImagPart( const Complex<Real>& alpha ) EL_NO_EXCEPT
 { return alpha.imag(); }
@@ -126,6 +127,16 @@ template<typename Real,
 void UpdateRealPart( Real& alpha, const Real& beta )
 EL_NO_EXCEPT
 { alpha += beta; }
+
+#ifdef HYDROGEN_GPU_USE_FP16
+template <>
+inline void UpdateRealPart<gpu_half_type, void>(
+    gpu_half_type& alpha, gpu_half_type const& beta) EL_NO_EXCEPT
+{
+    alpha = float(alpha)+float(beta);
+}
+#endif // HYDROGEN_GPU_USE_FP16
+
 template<typename Real>
 void UpdateRealPart( Complex<Real>& alpha, const Real& beta )
 EL_NO_EXCEPT
@@ -192,14 +203,14 @@ Real SafeNormAbs( const Real& chi0Abs, const Real& chi1Abs )
 {
     const Real maxAbs = Max( chi0Abs, chi1Abs );
     const Real minAbs = Min( chi0Abs, chi1Abs );
-    if( minAbs == Real(0) )
+    if( minAbs == TypeTraits<Real>::Zero() )
     {
         return maxAbs;
     }
     else
     {
         const Real ratio = minAbs / maxAbs;
-        return maxAbs*Sqrt( 1 + ratio*ratio );
+        return Real{maxAbs*Sqrt( 1 + ratio*ratio )};
     }
 }
 
@@ -220,7 +231,7 @@ Real SafeNorm( const Real& chi0, const Real& chi1, const Real& chi2 )
     const Real chi1Abs = Abs(chi1);
     const Real chi2Abs = Abs(chi2);
     const Real maxAbs = Max( Max( chi0Abs, chi1Abs ), chi2Abs );
-    if( maxAbs == Real(0) )
+    if( maxAbs == TypeTraits<Real>::Zero() )
     {
         // Ensure NaN propagation
         return chi0Abs + chi1Abs + chi2Abs;
@@ -246,7 +257,7 @@ Real SafeNorm
     const Real chi2Abs = Abs(chi2);
     const Real chi3Abs = Abs(chi3);
     const Real maxAbs = Max( Max( Max( chi0Abs, chi1Abs ), chi2Abs ), chi3Abs );
-    if( maxAbs == Real(0) )
+    if( maxAbs == TypeTraits<Real>::Zero() )
     {
         // Ensure NaN propagation
         return chi0Abs + chi1Abs + chi2Abs + chi3Abs;
@@ -308,9 +319,9 @@ Real Sgn( const Real& alpha, bool symmetric ) EL_NO_EXCEPT
     if( alpha < 0 )
         return Real(-1);
     else if( alpha > 0 || !symmetric )
-        return Real(1);
+        return TypeTraits<Real>::One();
     else
-        return Real(0);
+        return TypeTraits<Real>::Zero();
 }
 
 template<typename Real,
@@ -322,7 +333,7 @@ template<typename Real>
 Complex<Real> Phase( const Complex<Real>& alpha, bool symmetric ) EL_NO_EXCEPT
 {
     const Real alphaAbs = Abs(alpha);
-    if( alphaAbs == Real(0) )
+    if( alphaAbs == TypeTraits<Real>::Zero() )
         return ( symmetric ? Complex<Real>(0) : Complex<Real>(1) );
     else
         return alpha / alphaAbs;
@@ -343,11 +354,24 @@ template<typename Real,
 Complex<Real> Exp( const Complex<Real>& alpha ) EL_NO_EXCEPT
 { return ComplexFromPolar( Exp(RealPart(alpha)), ImagPart(alpha) ); }
 
+template<typename F,
+         typename/*=EnableIf<IsField<F>>*/,
+         typename/*=EnableIf<IsStdScalar<F>>*/>
+F Expm1( const F& alpha ) EL_NO_EXCEPT
+{ return std::expm1(alpha); }
+
+template<typename Real,
+         typename/*=EnableIf<IsField<Real>>*/,
+         typename/*=DisableIf<IsStdScalar<Real>>*/,
+         typename/*=void*/>
+Complex<Real> Expm1( const Complex<Real>& alpha ) EL_NO_EXCEPT
+{ return ComplexFromPolar( Expm1(RealPart(alpha)), ImagPart(alpha) ); }
+
 template<typename FBase,typename TExp,
          typename/*=EnableIf<IsStdField<FBase>>*/,
          typename/*=EnableIf<IsStdField<TExp>>*/>
 FBase Pow( const FBase& alpha, const TExp& beta )
-{ return std::pow( alpha, beta ); }
+{ return FBase{std::pow( alpha, beta )}; }
 
 template<typename FBase,typename TExp,
          typename/*=EnableIf<IsStdField<FBase>>*/,
@@ -370,7 +394,7 @@ TBase Pow( const TBase& alpha, const TExp& beta )
     const TBase alpha_to_even =
       ( halfEven == static_cast<TExp>(0) ? 1 : Pow( alpha*alpha, halfEven ) );
     if( beta == 2*halfEven )
-        return alpha_to_even; 
+        return alpha_to_even;
     else
         return alpha_to_even*alpha;
 }
@@ -386,8 +410,11 @@ template<typename Real,
          typename/*=DisableIf<IsStdField<Real>>*/>
 Complex<Real> Pow( const Complex<Real>& alpha, const Real& beta )
 {
-    if( alpha.imag() == Real(0) && alpha.real() > Real(0) )
+    if( alpha.imag() == TypeTraits<Real>::Zero()
+        && alpha.real() > TypeTraits<Real>::Zero() )
+    {
         return Pow( alpha.real(), beta );
+    }
     Complex<Real> tau = Log( alpha );
     return ComplexFromPolar( Exp(beta*tau.real()), beta*tau.imag() );
 }
@@ -452,7 +479,7 @@ double Log10( const Integer& alpha )
 template<typename F,
          typename/*=EnableIf<IsStdScalar<F>>*/>
 F Sqrt( const F& alpha )
-{ return std::sqrt(alpha); }
+{ return F(std::sqrt(alpha)); /* explicit conversion required because half_float::half(float&) is explicit. */ }
 
 // Use a branch cut on the negative real axis
 template<typename Real,
@@ -462,10 +489,10 @@ Complex<Real> Sqrt( const Complex<Real>& alpha )
 {
     const Real realPart = alpha.real();
     const Real imagPart = alpha.imag();
-    if( realPart == Real(0) )
+    if( realPart == TypeTraits<Real>::Zero() )
     {
         const Real tau = Sqrt( Abs(imagPart)/2 );
-        if( imagPart >= Real(0) )
+        if( imagPart >= TypeTraits<Real>::Zero() )
             return Complex<Real>( tau, tau );
         else
             return Complex<Real>( tau, -tau );
@@ -474,13 +501,13 @@ Complex<Real> Sqrt( const Complex<Real>& alpha )
     {
         const Real tau = Sqrt( 2*(Abs(alpha)+Abs(realPart)) );
         const Real ups = tau / 2;
-        if( realPart > Real(0) )
+        if( realPart > TypeTraits<Real>::Zero() )
         {
             return Complex<Real>( ups, imagPart/tau );
         }
         else
         {
-            if( imagPart >= Real(0) )
+            if( imagPart >= TypeTraits<Real>::Zero() )
             {
                 return Complex<Real>( Abs(imagPart)/tau, ups );
             }
@@ -601,10 +628,10 @@ Complex<Real> Atan( const Complex<Real>& alpha )
     const Real imagPart = alpha.imag();
     const Real realSquare = realPart*realPart;
     const Real imagSquare = imagPart*imagPart;
-    const Real x = Real(1) - realSquare - imagSquare;
+    const Real x = TypeTraits<Real>::One() - realSquare - imagSquare;
 
-    Real numerator = imagPart + Real(1);
-    Real denominator = imagPart - Real(1);
+    Real numerator = imagPart + TypeTraits<Real>::One();
+    Real denominator = imagPart - TypeTraits<Real>::One();
 
     numerator = realSquare + numerator*numerator;
     denominator = realSquare + denominator*denominator;
@@ -691,7 +718,7 @@ template<typename Real,
          typename/*=DisableIf<IsStdField<Real>>*/>
 Complex<Real> Acosh( const Complex<Real>& alpha )
 {
-    return Real(2)*Log( Sqrt((alpha+Real(1))/2) + Sqrt((alpha-Real(1))/2) );
+    return Real(2)*Log( Sqrt((alpha+TypeTraits<Real>::One())/2) + Sqrt((alpha-TypeTraits<Real>::One())/2) );
 }
 
 template<typename F,
@@ -707,7 +734,7 @@ Complex<Real> Asinh( const Complex<Real>& alpha )
     const Real realPart = alpha.real();
     const Real imagPart = alpha.imag();
     Complex<Real>
-      tau( (realPart-imagPart)*(realPart+imagPart) + Real(1),
+      tau( (realPart-imagPart)*(realPart+imagPart) + TypeTraits<Real>::One(),
            Real(2)*realPart*imagPart );
     tau = Sqrt( tau );
     return Log( tau + alpha );
@@ -727,10 +754,10 @@ Complex<Real> Atanh( const Complex<Real>& alpha )
     const Real imagPart = alpha.imag();
     const Real realSquare = realPart*realPart;
     const Real imagSquare = imagPart*imagPart;
-    const Real x = Real(1) - realSquare - imagSquare;
+    const Real x = TypeTraits<Real>::One() - realSquare - imagSquare;
 
-    Real numerator = Real(1) + realPart;
-    Real denominator = Real(1) - realPart;
+    Real numerator = TypeTraits<Real>::One() + realPart;
+    Real denominator = TypeTraits<Real>::One() - realPart;
     numerator = imagSquare + numerator*numerator;
     denominator = imagSquare + denominator*denominator;
 
@@ -747,7 +774,7 @@ Complex<Real> Atanh( const Complex<Real>& alpha )
 template<typename Real,
          typename/*=EnableIf<IsReal<Real>>*/>
 Real Round( const Real& alpha )
-{ return std::round(alpha); }
+{ return Real{std::round(alpha)}; }
 
 template<typename Real>
 Complex<Real> Round( const Complex<Real>& alpha )
@@ -784,7 +811,7 @@ void UpdateScaledSquare
 {
     typedef Base<F> Real;
     Real alphaAbs = Abs(alpha);
-    if( alphaAbs != Real(0) )
+    if( alphaAbs != TypeTraits<Real>::Zero() )
     {
         if( alphaAbs <= scale )
         {
@@ -794,7 +821,7 @@ void UpdateScaledSquare
         else
         {
             const Real relScale = scale/alphaAbs;
-            scaledSquare = scaledSquare*relScale*relScale + Real(1);
+            scaledSquare = scaledSquare*relScale*relScale + TypeTraits<Real>::One();
             scale = alphaAbs;
         }
     }
@@ -807,7 +834,7 @@ void DowndateScaledSquare
 {
     typedef Base<F> Real;
     Real alphaAbs = Abs(alpha);
-    if( alphaAbs != Real(0) )
+    if( alphaAbs != TypeTraits<Real>::Zero() )
     {
         EL_DEBUG_ONLY(
           if( alphaAbs > scale )
@@ -816,7 +843,7 @@ void DowndateScaledSquare
         const Real relScale = alphaAbs/scale;
         scaledSquare -= relScale*relScale;
         EL_DEBUG_ONLY(
-          if( scaledSquare < Real(0) )
+          if( scaledSquare < TypeTraits<Real>::Zero() )
               LogicError("Downdate produced a negative value");
         )
     }

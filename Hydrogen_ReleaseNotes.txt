@@ -1,0 +1,27 @@
+Notes for v1.1.0:
+
+- Miscellaneous bug fixes.
+- Add profiling interface for VTune and NVProf.
+- Add half-precision support for the the CPU. GPU support is still
+  work in progress.
+
+Notes for v1.0.1:
+
+- Significant tidying of build system
+
+- Added range-based version checking in CMake export
+
+- Added full Aluminum support for all collectives: AllGather,
+  AllReduce, AllToAll, Broadcast, Gather, Reduce, ReduceScatter,
+  and Scatter (and SendRecv).
+
+Notes for v1.0:
+
+- Added the notion of multiple "Devices" for matrices.
+
+- Added GPU support throughout the library. Support is still "as
+  needed". Please report gaps to Tom Benson31.
+
+- Using distributed objects with GPU memory requires CUDA-aware MPI.
+
+- Added preliminary Aluminum integration (https://github.com/llnl/aluminum).

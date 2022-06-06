@@ -9,31 +9,54 @@
 #ifndef EL_BLAS_SEND_HPP
 #define EL_BLAS_SEND_HPP
 
-namespace El {
+namespace El
+{
 
-template<typename T>
-void Send( const Matrix<T>& A, mpi::Comm comm, int destination )
+template<typename T, Device D>
+void Send(Matrix<T,D> const& A, mpi::Comm const& comm, int destination)
 {
     EL_DEBUG_CSE
     const Int height = A.Height();
     const Int width = A.Width();
     const Int size = height*width;
+
+    SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A);
+
     if( height == A.LDim() )
     {
-        mpi::Send( A.LockedBuffer(), size, destination, comm );
+        mpi::Send(A.LockedBuffer(), size, destination, comm, syncInfoA);
     }
     else
     {
-        vector<T> buf;
-        FastResize( buf, size );
+        simple_buffer<T,D> buf(size, syncInfoA);
 
         // Pack
-        copy::util::InterleaveMatrix
-        ( height, width,
-          A.LockedBuffer(), 1, A.LDim(),
-          buf.data(),       1, height );
+        copy::util::InterleaveMatrix(
+            height, width,
+            A.LockedBuffer(), 1, A.LDim(),
+            buf.data(),       1, height, syncInfoA);
 
-        mpi::Send( buf.data(), size, destination, comm );
+        mpi::Send(buf.data(), size, destination, comm, syncInfoA);
+    }
+}
+
+template <typename T>
+void Send(AbstractMatrix<T> const& A, mpi::Comm const& comm, int destination)
+{
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        Send(static_cast<Matrix<T,Device::CPU> const&>(A),
+             std::move(comm), destination);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        Send(static_cast<Matrix<T,Device::GPU> const&>(A),
+             std::move(comm), destination);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Send: Bad Device.");
     }
 }
 
@@ -43,8 +66,9 @@ void Send( const Matrix<T>& A, mpi::Comm comm, int destination )
 # define EL_EXTERN extern
 #endif
 
-#define PROTO(T) \
-  EL_EXTERN template void Send( const Matrix<T>& A, mpi::Comm comm, int rank );
+#define PROTO(T)                                                        \
+    EL_EXTERN template void Send(                                       \
+        const AbstractMatrix<T>& A, mpi::Comm const& comm, int rank );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

@@ -6,6 +6,7 @@
    which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
+#define H_INSTANTIATING_MPI_TYPES_STRUCT
 #include <El-lite.hpp>
 using std::function;
 
@@ -26,28 +27,12 @@ template<> Datatype Types<int>::type = MPI_INT;
 template<> Datatype Types<unsigned>::type = MPI_UNSIGNED;
 template<> Datatype Types<long int>::type = MPI_LONG_INT;
 template<> Datatype Types<unsigned long>::type = MPI_UNSIGNED_LONG;
-#ifdef EL_HAVE_MPI_LONG_LONG
 template<> Datatype Types<long long int>::type = MPI_LONG_LONG_INT;
 template<> Datatype Types<unsigned long long>::type = MPI_UNSIGNED_LONG_LONG;
-#endif
 template<> Datatype Types<float>::type = MPI_FLOAT;
 template<> Datatype Types<double>::type = MPI_DOUBLE;
-/* I'm not sure of whether it is better to manually implement these
-   or not. MPI_COMPLEX and MPI_DOUBLE_COMPLEX are dangerous since it
-   appears that recent versions of MPICH leave them as NULL when
-   compiling with Clang.
-
-   It also appears that certain versions of OpenMPI do not support
-   MPI_C_FLOAT_COMPLEX and MPI_C_DOUBLE_COMPLEX, and so we will, for now,
-   use these by default and fall back to MPI_COMPLEX and
-   MPI_DOUBLE_COMPLEX otherwise. */
-#ifdef EL_HAVE_MPI_C_COMPLEX
 template<> Datatype Types<Complex<float>>::type = MPI_C_FLOAT_COMPLEX;
 template<> Datatype Types<Complex<double>>::type = MPI_C_DOUBLE_COMPLEX;
-#else
-template<> Datatype Types<Complex<float>>::type = MPI_COMPLEX;
-template<> Datatype Types<Complex<double>>::type = MPI_DOUBLE_COMPLEX;
-#endif
 
 template<typename T>
 bool Types<T>::createdTypeBeforeResize = false;
@@ -109,11 +94,9 @@ template struct Types<unsigned long>;
 template struct Types<int>; // Avoid conflict with Int
 #endif
 template struct Types<long int>;
-#ifdef EL_HAVE_MPI_LONG_LONG
 template struct Types<unsigned long long>;
 #ifndef EL_USE_64BIT_INTS
 template struct Types<long long int>; // Avoid conflict with Int
-#endif
 #endif
 
 #define PROTO(T) \
@@ -121,11 +104,16 @@ template struct Types<long long int>; // Avoid conflict with Int
   template struct Types<ValueInt<T>>; \
   template struct Types<Entry<T>>;
 
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
+
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 // TODO(poulson): ValueInt<Real> user functions and ops
@@ -281,7 +269,7 @@ void FreeResizedScalarFamily()
 
 } // anonymous namespace
 
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 
 void CreateBigIntType()
 {
@@ -332,7 +320,7 @@ void CreateBigFloatType()
     CreateStruct<BigFloat>( 4, blockLengths, displs, typeList );
     CreateResized<BigFloat>( 0, packedSize );
 }
-#endif // ifdef EL_HAVE_MPC
+#endif // ifdef HYDROGEN_HAVE_MPC
 
 template<typename T,typename=EnableIf<IsPacked<T>>>
 static void
@@ -806,7 +794,7 @@ void CreateEntryType() EL_NO_EXCEPT
     CreateResized<Entry<T>>( 0, extent );
 }
 
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 void CreateBigIntFamily()
 {
     CreateBigIntType();
@@ -953,7 +941,7 @@ void CreateCustom() EL_NO_RELEASE_EXCEPT
     CreateMaxLocPairOp<double>();
     CreateMinLocPairOp<double>();
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
     // DoubleDouble
     // ============
     CreateContiguous<DoubleDouble>( 2, MPI_DOUBLE );
@@ -997,7 +985,7 @@ void CreateCustom() EL_NO_RELEASE_EXCEPT
     CreateMinLocPairOp<QuadDouble>();
 #endif
 
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
     // Quad
     // ====
     CreateContiguous<Quad>( 2, MPI_DOUBLE );
@@ -1020,7 +1008,7 @@ void CreateCustom() EL_NO_RELEASE_EXCEPT
     CreateMinLocPairOp<Quad>();
 #endif
 
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
     // BigFloat
     // ========
     // NOTE: The BigFloat types are created by mpfr::SetPrecision previously
@@ -1072,14 +1060,14 @@ void DestroyCustom() EL_NO_RELEASE_EXCEPT
     DestroyFamily<Int>();
     DestroyScalarFamily<float>();
     DestroyScalarFamily<double>();
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
     DestroyScalarFamily<DoubleDouble>();
     DestroyScalarFamily<QuadDouble>();
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
     DestroyScalarFamily<Quad>();
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
     DestroyScalarFamily<BigFloat>();
     DestroyFamily<BigInt>();
 #endif

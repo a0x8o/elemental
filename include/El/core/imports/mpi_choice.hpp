@@ -26,9 +26,10 @@ using std::vector;
 class MpiArgs
 {
 public:
-    MpiArgs
-    ( int argc, char** argv,
-      mpi::Comm comm=mpi::COMM_WORLD, ostream& error=cerr );
+    MpiArgs(int argc, char** argv);
+    MpiArgs(int argc, char** argv, mpi::Comm const& comm);
+    MpiArgs(int argc, char** argv, mpi::Comm const& comm, ostream& error);
+
     virtual ~MpiArgs() { }
 
     template<typename T>
@@ -44,7 +45,7 @@ protected:
     char** argv_;
     vector<bool> usedArgs_;
     ostream& error_;
-    mpi::Comm comm_;
+    MPI_Comm comm_;
 
     virtual void HandleVersion( ostream& os=cout ) const { EL_UNUSED(os); }
     virtual void HandleBuild( ostream& os=cout ) const { EL_UNUSED(os); }
@@ -75,15 +76,17 @@ protected:
 
 
 inline
-MpiArgs::MpiArgs( int argc, char** argv, mpi::Comm comm, ostream& error )
-: argc_(argc), argv_(argv), usedArgs_(argc,false), error_(error), comm_(comm)
+MpiArgs::MpiArgs( int argc, char** argv, mpi::Comm const& comm, ostream& error )
+    : argc_(argc), argv_(argv), usedArgs_(argc,false), error_(error),
+      comm_(comm.GetMPIComm())
 { }
 
 template<typename T>
 inline T
 MpiArgs::Input( string name, string desc )
 {
-    const int commRank = mpi::Rank( comm_ );
+    int commRank;
+    MPI_Comm_rank(comm_, &commRank);
 
     char** arg = std::find( argv_, argv_+argc_, name );
     const bool found = ( arg != argv_+argc_ );
@@ -132,7 +135,8 @@ template<typename T>
 inline T
 MpiArgs::Input( string name, string desc, T defaultVal )
 {
-    const int commRank = mpi::Rank( comm_ );
+    int commRank;
+    MPI_Comm_rank(comm_, &commRank);
 
     char** arg = std::find( argv_, argv_+argc_, name );
     const bool found = ( arg != argv_+argc_ );
@@ -209,7 +213,8 @@ MpiArgs::Process( ostream& os ) const
 inline void
 MpiArgs::PrintReport( ostream& os ) const
 {
-    const int commRank = mpi::Rank( comm_ );
+    int commRank;
+    MPI_Comm_rank(comm_, &commRank);
     if( commRank != 0 )
         return;
 

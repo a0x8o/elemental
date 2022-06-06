@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_BLAS_COPY_PARTIALROWFILTER_HPP
@@ -12,8 +12,8 @@
 namespace El {
 namespace copy {
 
-template<typename T>
-void PartialRowFilter
+template <Device D, typename T>
+void PartialRowFilter_impl
 ( const ElementalMatrix<T>& A, ElementalMatrix<T>& B )
 {
     EL_DEBUG_CSE
@@ -39,14 +39,20 @@ void PartialRowFilter
 
     const Int localWidth = B.LocalWidth();
 
+    SyncInfo<D> syncInfoA = SyncInfoFromMatrix(static_cast<Matrix<T,D> const&>(A.LockedMatrix())),
+        syncInfoB = SyncInfoFromMatrix(static_cast<Matrix<T,D> const&>(B.LockedMatrix()));
+
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
     if( rowDiff == 0 )
     {
         const Int rowShift = B.RowShift();
         const Int rowOffset = (rowShift-rowShiftA) / rowStridePart;
-        util::InterleaveMatrix
-        ( height, localWidth,
-          A.LockedBuffer(0,rowOffset), 1, rowStrideUnion*A.LDim(),
-          B.Buffer(),                  1, B.LDim() );
+        util::InterleaveMatrix(
+            height, localWidth,
+            A.LockedBuffer(0,rowOffset), 1, rowStrideUnion*A.LDim(),
+            B.Buffer(),                  1, B.LDim(),
+            syncInfoB);
     }
     else
     {
@@ -67,26 +73,53 @@ void PartialRowFilter
         const Int localWidthSend = Length( width, sendRowShift, rowStride );
         const Int sendSize = height*localWidthSend;
         const Int recvSize = height*localWidth;
-        vector<T> buffer;
-        FastResize( buffer, sendSize+recvSize );
-        T* sendBuf = &buffer[0];
-        T* recvBuf = &buffer[sendSize];
+        simple_buffer<T,D> buffer(sendSize+recvSize, syncInfoB);
+        T* sendBuf = buffer.data();
+        T* recvBuf = buffer.data() + sendSize;
+
         // Pack
-        util::InterleaveMatrix
-        ( height, localWidthSend,
-          A.LockedBuffer(0,sendRowOffset), 1, rowStrideUnion*A.LDim(),
-          sendBuf,                         1, height );
+        util::InterleaveMatrix(
+            height, localWidthSend,
+            A.LockedBuffer(0,sendRowOffset), 1, rowStrideUnion*A.LDim(),
+            sendBuf,                         1, height,
+            syncInfoB);
+
         // Change the column alignment
-        mpi::SendRecv
-        ( sendBuf, sendSize, sendRowRankPart,
-          recvBuf, recvSize, recvRowRankPart, B.PartialRowComm() );
+        mpi::SendRecv(
+            sendBuf, sendSize, sendRowRankPart,
+            recvBuf, recvSize, recvRowRankPart, B.PartialRowComm(),
+            syncInfoB);
 
         // Unpack
         // ------
-        util::InterleaveMatrix
-        ( height, localWidth,
-          recvBuf,    1, height,
-          B.Buffer(), 1, B.LDim() );
+        util::InterleaveMatrix(
+            height, localWidth,
+            recvBuf,    1, height,
+            B.Buffer(), 1, B.LDim(), syncInfoB);
+    }
+}
+
+template <typename T>
+void PartialRowFilter
+( const ElementalMatrix<T>& A, ElementalMatrix<T>& B )
+{
+    EL_DEBUG_CSE
+    if (A.GetLocalDevice() != B.GetLocalDevice())
+        LogicError(
+            "PartialRowFilter: For now, A and B must be on same device.");
+
+    switch (A.GetLocalDevice())
+    {
+    case Device::CPU:
+        PartialRowFilter_impl<Device::CPU>(A,B);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        PartialRowFilter_impl<Device::GPU>(A,B);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("PartialRowFilter: Bad device.");
     }
 }
 

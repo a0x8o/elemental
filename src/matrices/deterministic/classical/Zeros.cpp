@@ -13,7 +13,39 @@
 namespace El {
 
 template<typename T>
+void Zeros_seq( Matrix<T>& A, Int m, Int n )
+{
+    EL_DEBUG_CSE
+    A.Resize( m, n );
+    Zero_seq( A );
+}
+
+template<typename T>
+void Zeros_seq( AbstractMatrix<T>& A, Int m, Int n )
+{
+    EL_DEBUG_CSE
+    A.Resize( m, n );
+    Zero_seq( A );
+}
+
+template<typename T>
+void Zeros_seq( AbstractDistMatrix<T>& A, Int m, Int n )
+{
+    EL_DEBUG_CSE
+    A.Resize( m, n );
+    Zero_seq( A );
+}
+
+template<typename T>
 void Zeros( Matrix<T>& A, Int m, Int n )
+{
+    EL_DEBUG_CSE
+    A.Resize( m, n );
+    Zero( A );
+}
+
+template<typename T>
+void Zeros( AbstractMatrix<T>& A, Int m, Int n )
 {
     EL_DEBUG_CSE
     A.Resize( m, n );
@@ -28,42 +60,25 @@ void Zeros( AbstractDistMatrix<T>& A, Int m, Int n )
     Zero( A );
 }
 
-template<typename T>
-void Zeros( SparseMatrix<T>& A, Int m, Int n )
-{
-    EL_DEBUG_CSE
-    A.Resize( m, n );
-    Zero( A );
-}
-
-template<typename T>
-void Zeros( DistSparseMatrix<T>& A, Int m, Int n )
-{
-    EL_DEBUG_CSE
-    A.Resize( m, n );
-    Zero( A );
-}
-
-template<typename T>
-void Zeros( DistMultiVec<T>& A, Int m, Int n )
-{
-    EL_DEBUG_CSE
-    A.Resize( m, n );
-    Zero( A );
-}
 
 #define PROTO(T) \
+  template void Zeros_seq( Matrix<T>& A, Int m, Int n ); \
+  template void Zeros_seq( AbstractMatrix<T>& A, Int m, Int n ); \
+  template void Zeros_seq( AbstractDistMatrix<T>& A, Int m, Int n ); \
   template void Zeros( Matrix<T>& A, Int m, Int n ); \
-  template void Zeros( AbstractDistMatrix<T>& A, Int m, Int n ); \
-  template void Zeros( SparseMatrix<T>& A, Int m, Int n ); \
-  template void Zeros( DistSparseMatrix<T>& A, Int m, Int n ); \
-  template void Zeros( DistMultiVec<T>& A, Int m, Int n );
+  template void Zeros( AbstractMatrix<T>& A, Int m, Int n ); \
+  template void Zeros( AbstractDistMatrix<T>& A, Int m, Int n );
+
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif // HYDROGEN_GPU_USE_FP16
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

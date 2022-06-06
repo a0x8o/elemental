@@ -56,6 +56,8 @@ void DistMap::Translate
     const int commSize = grid_->Size();
     const int commRank = grid_->Rank();
 
+    LogicError("Error");
+
     // Count how many indices we need each process to map
     // Avoid unncessary branching within the loop by avoiding RowToProcess
     vector<int> requestSizes( commSize, 0 );
@@ -68,8 +70,9 @@ void DistMap::Translate
 
     // Send our requests and find out what we need to fulfill
     vector<int> fulfillSizes( commSize );
-    mpi::AllToAll
-    ( requestSizes.data(), 1, fulfillSizes.data(), 1, grid_->Comm() );
+    mpi::AllToAll(
+        requestSizes.data(), 1, fulfillSizes.data(), 1, grid_->Comm(),
+        SyncInfo<Device::CPU>{});
 
     // Prepare for the AllToAll to exchange request sizes
     vector<int> requestOffs, fulfillOffs;
@@ -88,9 +91,10 @@ void DistMap::Translate
 
     // Perform the first index exchange
     vector<int> fulfills( numFulfills );
-    mpi::AllToAll
-    ( requests.data(), requestSizes.data(), requestOffs.data(),
-      fulfills.data(), fulfillSizes.data(), fulfillOffs.data(), grid_->Comm() );
+    mpi::AllToAll(
+        requests.data(), requestSizes.data(), requestOffs.data(),
+        fulfills.data(), fulfillSizes.data(), fulfillOffs.data(),
+        grid_->Comm(), SyncInfo<Device::CPU>{});
 
     // Map all of the indices in 'fulfills'
     for( int s=0; s<numFulfills; ++s )
@@ -107,9 +111,10 @@ void DistMap::Translate
     }
 
     // Send everything back
-    mpi::AllToAll
-    ( fulfills.data(), fulfillSizes.data(), fulfillOffs.data(),
-      requests.data(), requestSizes.data(), requestOffs.data(), grid_->Comm() );
+    mpi::AllToAll(
+        fulfills.data(), fulfillSizes.data(), fulfillOffs.data(),
+        requests.data(), requestSizes.data(), requestOffs.data(),
+        grid_->Comm(), SyncInfo<Device::CPU>{});
 
     // Unpack in the same way we originally packed
     // Avoid unncessary branching within the loop by avoiding RowToProcess
@@ -245,12 +250,14 @@ void InvertMap( const DistMap& map, DistMap& inverseMap )
 {
     EL_DEBUG_CSE
     const El::Grid& grid = map.Grid();
-    mpi::Comm comm = grid.Comm();
+    mpi::Comm const& comm = grid.Comm();
     const int commSize = grid.Size();
 
     const Int numLocalSources = map.NumLocalSources();
     const vector<Int>& localMap = map.Map();
     const Int firstLocalSource = map.FirstLocalSource();
+
+    LogicError("Error");
 
     // TODO(poulson): Allow this to be cached?
     vector<int> owners(numLocalSources);
@@ -264,7 +271,8 @@ void InvertMap( const DistMap& map, DistMap& inverseMap )
 
     // Coordinate all of the processes on their send sizes
     vector<int> recvSizes( commSize );
-    mpi::AllToAll( sendSizes.data(), 1, recvSizes.data(), 1, comm );
+    mpi::AllToAll(sendSizes.data(), 1, recvSizes.data(), 1, comm,
+                  SyncInfo<Device::CPU>{});
 
     // Prepare for the AllToAll to exchange send sizes
     vector<int> sendOffs, recvOffs;
@@ -292,7 +300,8 @@ void InvertMap( const DistMap& map, DistMap& inverseMap )
     vector<int> recvs( numRecvs );
     mpi::AllToAll
     ( sends.data(), sendSizes.data(), sendOffs.data(),
-      recvs.data(), recvSizes.data(), recvOffs.data(), comm );
+      recvs.data(), recvSizes.data(), recvOffs.data(), comm,
+      SyncInfo<Device::CPU>{} );
 
     // Form our part of the inverse map
     inverseMap.SetGrid( grid );

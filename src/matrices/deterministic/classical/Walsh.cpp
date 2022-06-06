@@ -23,8 +23,8 @@ void Walsh( Matrix<T>& A, Int k, bool binary )
 
     // Run a simple O(n^2 log n) algorithm for computing the entries
     // based upon successive sign flips
-    const T onValue = 1;
-    const T offValue = ( binary ? 0 : -1 );
+    const T onValue{1};
+    const T offValue( binary ? 0 : -1 ); // {} disallows narrowing conversion.  Use ().
     auto walshFill =
       [&]( Int i, Int j ) -> T
       {
@@ -58,8 +58,8 @@ void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary )
 
     // Run a simple O(n^2 log n) algorithm for computing the entries
     // based upon successive sign flips
-    const T onValue = 1;
-    const T offValue = ( binary ? 0 : -1 );
+    const T onValue{1};
+    const T offValue( binary ? 0 : -1 ); // {} disallows narrowing conversion.  Use ().
     auto walshFill =
       [&]( Int i, Int j ) -> T
       {
@@ -91,6 +91,7 @@ void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary )
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

@@ -15,9 +15,9 @@ namespace El {
 class Grid
 {
 public:
-    explicit Grid
-    ( mpi::Comm comm=mpi::COMM_WORLD, GridOrder order=COLUMN_MAJOR );
-    explicit Grid( mpi::Comm comm, int height, GridOrder order=COLUMN_MAJOR );
+    Grid();
+    explicit Grid(mpi::Comm comm, GridOrder order=COLUMN_MAJOR);
+    explicit Grid(mpi::Comm comm, int height, GridOrder order=COLUMN_MAJOR);
     ~Grid();
 
     // Simple interface (simpler version of distributed-based interface)
@@ -28,10 +28,10 @@ public:
     int Size() const EL_NO_EXCEPT;         // VCSize() and VRSize()
     int Rank() const EL_NO_RELEASE_EXCEPT; // same as OwningRank()
     GridOrder Order() const EL_NO_EXCEPT;  // either COLUMN_MAJOR or ROW_MAJOR
-    mpi::Comm ColComm() const EL_NO_EXCEPT; // MCComm()
-    mpi::Comm RowComm() const EL_NO_EXCEPT; // MRComm()
+    mpi::Comm const& ColComm() const EL_NO_EXCEPT; // MCComm()
+    mpi::Comm const& RowComm() const EL_NO_EXCEPT; // MRComm()
     // VCComm (VRComm) if COLUMN_MAJOR (ROW_MAJOR)
-    mpi::Comm Comm() const EL_NO_EXCEPT;
+    mpi::Comm const& Comm() const EL_NO_EXCEPT;
 
     // Distribution-based interface
     int MCRank() const EL_NO_RELEASE_EXCEPT;
@@ -48,17 +48,19 @@ public:
     int VCSize() const EL_NO_EXCEPT;
     int VRSize() const EL_NO_EXCEPT;
 
-    mpi::Comm MCComm() const EL_NO_EXCEPT;
-    mpi::Comm MRComm() const EL_NO_EXCEPT;
-    mpi::Comm VCComm() const EL_NO_EXCEPT;
-    mpi::Comm VRComm() const EL_NO_EXCEPT;
-    mpi::Comm MDComm() const EL_NO_EXCEPT;
-    mpi::Comm MDPerpComm() const EL_NO_EXCEPT;
+    mpi::Comm const& MCComm() const EL_NO_EXCEPT;
+    mpi::Comm const& MRComm() const EL_NO_EXCEPT;
+    mpi::Comm const& VCComm() const EL_NO_EXCEPT;
+    mpi::Comm const& VRComm() const EL_NO_EXCEPT;
+    mpi::Comm const& MDComm() const EL_NO_EXCEPT;
+    mpi::Comm const& MDPerpComm() const EL_NO_EXCEPT;
 
     // Advanced routines
-    explicit Grid
-    ( mpi::Comm viewers, mpi::Group owners, int height,
-      GridOrder order=COLUMN_MAJOR );
+    explicit Grid(mpi::Comm viewers, mpi::Group owners, int height);
+    explicit Grid(
+        mpi::Comm viewers, mpi::Group owners, int height,
+        GridOrder order);
+
     // greatest common denominator of grid height and width
     int GCD() const EL_NO_EXCEPT;
     // lowest common multiple of grid height and width
@@ -69,8 +71,8 @@ public:
     int ViewingRank() const EL_NO_RELEASE_EXCEPT;
 
     mpi::Group OwningGroup() const EL_NO_EXCEPT;
-    mpi::Comm OwningComm() const EL_NO_EXCEPT;
-    mpi::Comm ViewingComm() const EL_NO_EXCEPT;
+    mpi::Comm const& OwningComm() const EL_NO_EXCEPT;
+    mpi::Comm const& ViewingComm() const EL_NO_EXCEPT;
     int Diag() const EL_NO_RELEASE_EXCEPT;
     int Diag( int vcRank ) const EL_NO_EXCEPT;
     int DiagRank() const EL_NO_RELEASE_EXCEPT;

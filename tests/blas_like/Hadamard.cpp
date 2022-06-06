@@ -13,6 +13,7 @@ using namespace El;
 template <typename T, DistWrap W>
 void TestHadamard(Int m, Int n, const Grid& g, bool print)
 {
+  El::Output("Testing TestHadamard with ",El::TypeName<T>());
   // Generate random matrices to test.
   DistMatrix<T, MC, MR, W> A(g);
   Uniform(A, m, n);
@@ -30,7 +31,7 @@ void TestHadamard(Int m, Int n, const Grid& g, bool print)
   if (print)
     Print(C, "C");
   // Manually check results.
-  for (Int j = 0; j < A.LocalWidth(); ++j) 
+  for (Int j = 0; j < A.LocalWidth(); ++j)
   {
     for (Int i = 0; i < A.LocalHeight(); ++i)
     {
@@ -49,7 +50,7 @@ void TestHadamard(Int m, Int n, const Grid& g, bool print)
 int main(int argc, char** argv)
 {
   Environment env(argc, argv);
-  mpi::Comm comm = mpi::COMM_WORLD;
+  mpi::Comm comm = mpi::NewWorldComm();
   try
   {
     const Int m = Input("--m", "height", 100);
@@ -58,8 +59,8 @@ int main(int argc, char** argv)
     ProcessInput();
     PrintInputReport();
 
-    const Grid g(comm);
-    OutputFromRoot(comm, "Testing Hadamard");
+    const Grid g(std::move(comm));
+    OutputFromRoot(g.Comm(), "Testing Hadamard");
     TestHadamard<float, ELEMENT>(m, n, g, print);
     TestHadamard<float, BLOCK>(m, n, g, print);
     TestHadamard<Complex<float>, ELEMENT>(m, n, g, print);
@@ -83,6 +84,9 @@ int main(int argc, char** argv)
     TestHadamard<Quad, BLOCK>(m, n, g, print);
     TestHadamard<Complex<Quad>, ELEMENT>(m, n, g, print);
     TestHadamard<Complex<Quad>, BLOCK>(m, n, g, print);
+#endif
+#if defined(HYDROGEN_HAVE_HALF)
+    TestHadamard<cpu_half_type, ELEMENT>(m, n, g, print);
 #endif
 #if defined(EL_HAVE_MPC)
     TestHadamard<BigFloat, ELEMENT>(m, n, g, print);

@@ -1,0 +1,71 @@
+#ifndef HYDROGEN_CONFIG_H
+#define HYDROGEN_CONFIG_H
+
+#define HYDROGEN_GIT_VERSION "@HYDROGEN_GIT_VERSION@"
+// The latest HEAD of the current local branch
+#define HYDROGEN_LATEST_SHA "@HYDROGEN_LATEST_SHA@"
+// The latest commit on the local "hydrogen" branch
+#define HYDROGEN_LATEST_HYDROGEN_SHA "@HYDROGEN_LATEST_HYDROGEN_SHA@"
+
+#define HYDROGEN_VERSION_MAJOR "@HYDROGEN_VERSION_MAJOR@"
+#define HYDROGEN_VERSION_MINOR "@HYDROGEN_VERSION_MINOR@"
+#define HYDROGEN_VERSION_PATCH "@HYDROGEN_VERSION_PATCH@"
+#define HYDROGEN_VERSION "@HYDROGEN_VERSION@"
+
+#cmakedefine HYDROGEN_RELEASE_BUILD
+
+// LAPACK stuff
+#cmakedefine HYDROGEN_BLAS_SUFFIX @HYDROGEN_BLAS_SUFFIX@
+#cmakedefine HYDROGEN_LAPACK_SUFFIX @HYDROGEN_LAPACK_SUFFIX@
+
+// 16-bit floating point stuff
+#cmakedefine HYDROGEN_HAVE_HALF
+#cmakedefine HYDROGEN_HAVE_BFLOAT16
+
+// Extended Precision stuff
+#cmakedefine HYDROGEN_HAVE_QUADMATH
+#cmakedefine HYDROGEN_HAVE_QD
+#cmakedefine HYDROGEN_HAVE_MPC
+
+#cmakedefine HYDROGEN_HAVE_LAPACK
+
+// MKL stuff
+#cmakedefine HYDROGEN_HAVE_MKL
+#cmakedefine HYDROGEN_HAVE_MKL_GEMMT
+
+#cmakedefine HYDROGEN_HAVE_GPU
+
+// CUDA stuff
+#cmakedefine HYDROGEN_HAVE_CUDA
+
+// ROCm stuff
+#cmakedefine HYDROGEN_HAVE_ROCM
+
+// General GPU stuff
+#cmakedefine HYDROGEN_HAVE_CUB
+#cmakedefine HYDROGEN_GPU_USE_TENSOR_OP_MATH
+#cmakedefine HYDROGEN_GPU_USE_FP16
+
+// Aluminum stuff
+#cmakedefine HYDROGEN_HAVE_ALUMINUM
+#cmakedefine HYDROGEN_HAVE_NCCL2
+#cmakedefine HYDROGEN_HAVE_AL_MPI_CUDA
+#cmakedefine HYDROGEN_HAVE_AL_HOST_XFER
+
+#cmakedefine HYDROGEN_ENSURE_HOST_MPI_BUFFERS
+#cmakedefine HYDROGEN_HAVE_CUDA_AWARE_MPI
+#cmakedefine HYDROGEN_MPI_IS_OPENMPI
+#cmakedefine HYDROGEN_MPI_IS_MVAPICH2
+
+#cmakedefine HYDROGEN_HAVE_OMP_TASKLOOP
+
+#cmakedefine HYDROGEN_HAVE_NVPROF
+#cmakedefine HYDROGEN_HAVE_VTUNE
+#cmakedefine HYDROGEN_DEFAULT_SYNC_PROFILING
+
+#cmakedefine HYDROGEN_DO_BOUNDS_CHECKING
+
+#define H_RESTRICT __restrict__
+#define H_PRETTY_FUNCTION __PRETTY_FUNCTION__
+
+#endif /* HYDROGEN_CONFIG_H */

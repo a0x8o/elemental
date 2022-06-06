@@ -1,794 +1,750 @@
+cmake_minimum_required(VERSION 3.21)
+cmake_policy(VERSION 3.21)
+
+project(Hydrogen CXX)
+
+# Setup version information
+find_program(__GIT_EXECUTABLE git)
+mark_as_advanced(__GIT_EXECUTABLE)
+if (__GIT_EXECUTABLE)
+
+  execute_process(
+    COMMAND ${__GIT_EXECUTABLE} rev-parse --is-inside-work-tree
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    OUTPUT_VARIABLE __BUILDING_FROM_GIT_SOURCES
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  if (__BUILDING_FROM_GIT_SOURCES)
+    execute_process(
+      COMMAND ${__GIT_EXECUTABLE} rev-parse --show-toplevel
+      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+      OUTPUT_VARIABLE __GIT_TOPLEVEL_DIR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+      COMMAND ${__GIT_EXECUTABLE} rev-parse --git-dir
+      WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
+      OUTPUT_VARIABLE __GIT_GIT_DIR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+      COMMAND ${__GIT_EXECUTABLE} --git-dir "${__GIT_GIT_DIR}" describe
+      --abbrev=7 --always --dirty --tags
+      WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
+      OUTPUT_VARIABLE __GIT_DESCRIBE_VERSION
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+      COMMAND ${__GIT_EXECUTABLE} rev-list HEAD --max-count=1 --date-order
+      WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
+      OUTPUT_VARIABLE __GIT_LATEST_COMMIT
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+      COMMAND ${__GIT_EXECUTABLE} rev-list hydrogen --max-count=1 --date-order
+      WORKING_DIRECTORY "${__GIT_TOPLEVEL_DIR}"
+      OUTPUT_VARIABLE __GIT_LATEST_HYDROGEN_COMMIT
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    set(HYDROGEN_GIT_VERSION "${__GIT_DESCRIBE_VERSION}")
+    set(HYDROGEN_LATEST_SHA "${__GIT_LATEST_COMMIT}")
+    set(HYDROGEN_LATEST_HYDROGEN_SHA "${__GIT_LATEST_HYDROGEN_COMMIT}")
+  endif (__BUILDING_FROM_GIT_SOURCES)
+endif (__GIT_EXECUTABLE)
+
+# This must be set because version tags
+set(HYDROGEN_VERSION_MAJOR 1)
+set(HYDROGEN_VERSION_MINOR 5)
+set(HYDROGEN_VERSION_PATCH 2)
+set(HYDROGEN_VERSION_MAJOR_MINOR
+    "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
+set(HYDROGEN_VERSION
+  "${HYDROGEN_VERSION_MAJOR_MINOR}.${HYDROGEN_VERSION_PATCH}")
+
+# Back-compatibility, until it's all sorted out
+set(EL_VERSION_MAJOR ${HYDROGEN_VERSION_MAJOR})
+set(EL_VERSION_MINOR ${HYDROGEN_VERSION_MINOR})
+set(EL_VERSION_PATCH ${HYDROGEN_VERSION_PATCH})
+
+string(TOUPPER "${PROJECT_NAME}" UPPER_PROJECT_NAME)
+
+if (NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(HYDROGEN_RELEASE_BUILD TRUE)
+endif ()
+
+# Prevent in-source builds
+if (PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+  message(FATAL_ERROR
+    "In-source build attempted; please clean the CMake cache and then "
+    "switch to an out-of-source build, e.g.,\n"
+    "rm CMakeCache.txt && rm -Rf CMakeFiles/\nmkdir build/ && "
+    "cd build/ && cmake ..\n")
+endif ()
+
+# Set the module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+
+# Add warning flags
+include(CheckCompilerFlag)
+set(__CXX_FLAGS "-Wno-unused-parameter")
+set(__CXX_DEVELOPER_FLAGS "-Wall" "-Wextra" "-Wpedantic" "-pedantic")
+set(__CUDA_FLAGS)
+set(__CUDA_DEVELOPER_FLAGS)
+
+# Handle some CMake basics.
 #
-#  Copyright 2009-2016, Jack Poulson
-#  All rights reserved.
+# These are highlighted because they default to OFF, but we prefer
+# that they default to ON.
+if (NOT DEFINED CMAKE_EXPORT_NO_PACKAGE_REGISTRY)
+  set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+endif ()
+
+if (NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif ()
+
+# Feature-related options
+
+option(Hydrogen_ENABLE_ALUMINUM
+  "Enable the Aluminum package for improved device-side communication."
+  OFF)
+
+option(Hydrogen_ENABLE_CUDA
+  "Search for CUDA support and enable related features if found."
+  OFF)
+
+option(Hydrogen_ENABLE_ROCM
+  "Search for ROCm/HIP support and enable related features if found."
+  OFF)
+
+if (Hydrogen_ENABLE_ROCM AND Hydrogen_ENABLE_CUDA)
+  message(FATAL_ERROR
+    "ROCm and CUDA code paths are mutually exclusive. "
+    "Please enable the one that corresponds to your hardware. "
+    "If you have mixed hardware, please contact the Hydrogen developers "
+    "as this would be of great interest.")
+endif ()
+
+if (Hydrogen_ENABLE_CUDA OR Hydrogen_ENABLE_ROCM)
+  option(Hydrogen_ENABLE_CUB
+    "Search for CUB support and enable related features if found."
+    ON)
+
+  option(Hydrogen_ENABLE_GPU_TENSOR_MATH
+    "Use the GPU tensor operations when available."
+    OFF)
+
+  option(Hydrogen_ENABLE_GPU_FP16
+    "Enable FP16 arithmetic in GPU code."
+    ON)
+endif ()
+
+option(Hydrogen_ENABLE_QUADMATH
+  "Search for quadmath library and enable related features if found." OFF)
+
+option(Hydrogen_ENABLE_QD
+  "Search for QD library and enable related features if found." OFF)
+
+option(Hydrogen_ENABLE_MPC
+  "Search for MPC(+MPFR+GMP) library and enable related features if found."
+  OFF)
+
 #
-#  Copyright 2012, Jed Brown
-#  All rights reserved.
+# MEMORY-RELATED OPTIONS
 #
-#  Copyright 2015, Jake Bolewski and Jiahao Chen
-#  All rights reserved.
-#
-#  This file is part of Elemental and is under the BSD 2-Clause License,
-#  which can be found in the LICENSE file in the root directory, or at
-#  http://opensource.org/licenses/BSD-2-Clause
-#
-if(APPLE)
-  # RPATH support for OS X was introduced in this version
-  cmake_minimum_required(VERSION 2.8.12)
-else()
-  # It is likely/possible that this version could be decreased, but this version
-  # was chosen to support the default version of CMake in CentOS 7
-  cmake_minimum_required(VERSION 2.8.11)
-endif()
 
-project(Elemental C CXX)
-set(EL_VERSION_MAJOR 0)
-set(EL_VERSION_MINOR 88-dev)
+option(Hydrogen_ENABLE_HALF
+  "Enable the use of \"half\" library." OFF)
+# This refers to the half.sourceforge.net type "half"
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+option(Hydrogen_ENABLE_BFLOAT16
+  "Enable the use of Intel's bfloat16 type." OFF)
+if (Hydrogen_ENABLE_BFLOAT16)
+  message(WARNING
+    "At time of writing, we are unaware of any implementation "
+    "of the \"bfloat16\". This is a placeholder option. If our "
+    "information is out of date, please open an issue and point "
+    "us to an implementation.")
+endif ()
 
-# Configuration options
-# =====================
+option(Hydrogen_USE_64BIT_INTS
+  "Use 64-bit integers for internal indexing" OFF)
+option(Hydrogen_USE_64BIT_BLAS_INTS
+  "Use 64-bit integers for BLAS/LAPACK" OFF)
+if (Hydrogen_USE_64BIT_BLAS_INTS)
+  set(EL_USE_64BIT_BLAS_INTS ON)
+  set(Hydrogen_USE_64BIT_INTS ON)
+endif ()
 
-# Basic options
-# -------------
-
-# "CMAKE_BUILD_TYPE"
-#   Elemental requires it to be one of the following two choices:
-#     1. Debug: Meant for development and debugging
-#     2. Release: Meant for production runs
-#   If either MinSizeRel or RelWithDebInfo are specified, then Elemental falls
-#   back to Release mode.
-#
-#   If "CMAKE_BUILD_TYPE" is not defined, the default is Release mode.
-
-# "CXX_FLAGS"
-#   Optimization and debugging/symbol flags
-
-# "OpenMP_CXX_FLAGS"
-#   Overrides the default compile flags for adding OpenMP support to CXX code
-
-# TODO(poulson): Add list of MPI variables here, such as
-# "MPI_CXX_COMPILE_FLAGS"
-
-# TODO(poulson): Add discussion of "MATH_LIBS" and "REFERENCE_ROOT"
-
-get_property(SUPPORTS_SHARED GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
-if(SUPPORTS_SHARED)
-  option(BUILD_SHARED_LIBS "Build shared libraries?" ON)
-else()
-  option(BUILD_SHARED_LIBS "Build shared libraries?" OFF)
-endif()
-if(BUILD_SHARED_LIBS AND NOT SUPPORTS_SHARED)
-  message("Elemental was configured to build shared libraries, but they are not supported on the target platform: BUILD_SHARED_LIBS will be manually set to OFF")
-  set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries?")
-endif()
-
-# Useful to turn off for shipping in OS packages
-option(BINARY_SUBDIRECTORIES "Install binaries into tree based on type" ON)
-
-include(GNUInstallDirs)
-if(NOT CMAKE_INSTALL_INCLUDEDIR)
-  set(CMAKE_INSTALL_INCLUDEDIR "include")
-endif()
-if(CMAKE_INSTALL_LIBDIR)
-  if(IS_ABSOLUTE CMAKE_INSTALL_LIBDIR)
-    message(FATAL_ERROR "CMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR} was an absolute path but Elemental requires it to be relative to CMAKE_INSTALL_PREFIX")
-  endif()
-else()
-  set(CMAKE_INSTALL_LIBDIR "lib")
-endif()
-if(NOT CMAKE_INSTALL_BINDIR)
-  set(CMAKE_INSTALL_BINDIR "bin/elemental")
-endif()
-if(NOT CMAKE_INSTALL_DATADIR)
-  set(CMAKE_INSTALL_DATADIR "share")
-endif()
-if(NOT CMAKE_INSTALL_DOCDIR)
-  set(CMAKE_INSTALL_DOCDIR "share/doc/elemental")
-endif()
-if(NOT CMAKE_INSTALL_SYSCONFDIR)
-  set(CMAKE_INSTALL_SYSCONFDIR "etc")
-endif()
-if(NOT INSTALL_CMAKE_DIR)
-  set( INSTALL_CMAKE_DIR "CMake")
-endif()
-# Whether or not to attempt to use OpenMP within hot-spots in Elemental
-# (NOTE: This option is not actively maintained)
-option(EL_HYBRID "Make use of OpenMP within MPI packing/unpacking" OFF)
-
-option(EL_C_INTERFACE "Build C interface" ON)
-
-if(BUILD_SHARED_LIBS AND EL_C_INTERFACE)
-  # Define PYTHON_SITE_PACKAGES if you want to install the python package
-  # somewhere other than the default system-wide location (e.g., within your
-  # home directory). Alternatively, if you do NOT define PYTHON_SITE_PACKAGES
-  # and instead define INSTALL_PYTHON_INTO_USER_SITE=ON, Elemental will
-  # install its Python interface into site.USER_SITE in your home directory.
-  option(INSTALL_PYTHON_PACKAGE "Install Python interface? (requires Python 2.x)" OFF)
-
-  set(Python_ADDITIONAL_VERSIONS 2.7)
-  include(FindPythonInterp) #Check for Python version
-
-  #Only Python 2.x supported
-  if (NOT PYTHON_VERSION_MAJOR EQUAL 2)
-    set(INSTALL_PYTHON_PACKAGE FALSE)
-  endif()
-endif()
-
-# Whether or not to use Qt5 for visualization if it is found.
-# Setting Qt5Widgets_DIR, Qt5_DIR, or Qt5_LIBDIR overrides this variable
-# and is often necessary anyway.
-option(EL_USE_QT5 "Attempt to use Qt5?" OFF)
-
-option(EL_EXAMPLES "Build simple examples?" OFF)
-option(EL_TESTS "Build performance and correctness tests?" OFF)
-option(EL_EXPERIMENTAL "Build experimental code" OFF)
-
-# Attempt to use 64-bit integers?
-option(EL_USE_64BIT_INTS "Use 64-bit integers for El indexing" OFF)
-option(EL_USE_64BIT_BLAS_INTS "Use 64-bit integers for BLAS/LAPACK" OFF)
-if(EL_USE_64BIT_BLAS_INTS)
+if (Hydrogen_USE_64BIT_INTS)
   set(EL_USE_64BIT_INTS ON)
-endif()
+endif ()
 
-option(EL_DISABLE_MKL "Do not use MKL even if installed?" OFF)
-option(EL_DISABLE_MKL_CSRMV "Avoid MKL's CSR mat-vec?" ON)
+# Debugging and testing options
 
-option(EL_DISABLE_BLIS_LAPACK "Avoid BLIS+LAPACK" OFF)
-option(EL_PREFER_BLIS_LAPACK "Prefer BLIS+LAPACK over alternatives?" OFF)
-option(EL_FORCE_BLIS_LAPACK_BUILD
-  "Avoid search for BLIS and instead buiild?" OFF)
+option(Hydrogen_ENABLE_BOUNDS_CHECKING
+  "Do bounds checking in various routines regardless of DEBUG build."
+  OFF)
+set(HYDROGEN_DO_BOUNDS_CHECKING ${Hydrogen_ENABLE_BOUNDS_CHECKING})
 
-option(EL_DISABLE_OPENBLAS "Avoid OpenBLAS" OFF)
-option(EL_PREFER_OPENBLAS "Prefer OpenBLAS over alternatives?" OFF)
-option(EL_FORCE_OPENBLAS_BUILD
-  "Avoid search for OpenBLAS and instead build?" OFF)
+option(Hydrogen_ENABLE_TESTING
+  "Build the test suite in the tests directory." ON)
 
-option(EL_DISABLE_SCALAPACK "Avoid ScaLAPACK" ON)
-if(NOT EL_DISABLE_SCALAPACK AND EL_USE_64BIT_BLAS_INTS AND
-   (NOT CUSTOM_BLAS_SUFFIX OR NOT CUSTOM_LAPACK_SUFFIX))
-  # Ugh. Elemental currently supports ScaLAPACK building its own custom
-  # BLAS and LAPACK if Elemental is using a custom symbol suffix for its own.
-  message(FATAL_ERROR "ScaLAPACK is not supported for 64-bit builds with manually specified BLAS/LAPACK libraries")
-endif()
-option(EL_FORCE_SCALAPACK_BUILD
-  "Avoid search for ScaLAPACK and instead build?" OFF)
+option(Hydrogen_ENABLE_UNIT_TESTS
+  "Build the Catch2-based unit tests." OFF)
 
-# By default, a search is performed for ParMETIS via find_package, and, if this
-# search fails, ParMETIS is downloaded from the official location:
-#    http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/parmetis-4.0.3.tar.gz
-# If EL_FORCE_PARMETIS_BUILD is turned on, then no initial call to
-# find_package is performed.
-#
-# Should you want to manually specify a ParMETIS installation, you can set the
-# variables PARMETIS_INCLUDE_DIRS and PARMETIS_LIBRARIES
-#
-option(EL_FORCE_PARMETIS_BUILD "Force build of ParMETIS?" OFF)
-# ParMETIS cannot be commercially used without a license and so users interested
-# in using Elemental in commercial applications should disable ParMETIS
-option(EL_DISABLE_PARMETIS "Disable ParMETIS?" OFF)
+option(Hydrogen_ZERO_INIT "Initialize buffers to zero by default?" OFF)
+mark_as_advanced(Hydrogen_ZERO_INIT)
+if (Hydrogen_ZERO_INIT)
+  set(EL_ZERO_INIT ${Hydrogen_ZERO_INIT})
+endif ()
 
-# If ParMETIS is disabled, a search is performed for METIS via find_package,
-# and, if this search fails, METIS is cloned from the git repo
-#     https://github.com/poulson/Metis.git.
-# If EL_FORCE_METIS_BUILD is turned on, then no initial call to find_package is
-# performed.
-#
-# Should you want to manually specify a METIS installation, you can set the
-# variables METIS_INCLUDE_DIRS and METIS_LIBRARIES
-option(EL_FORCE_METIS_BUILD "Force a build of METIS?" OFF)
+option(Hydrogen_ENABLE_VALGRIND
+  "Search for valgrind and enable related features" OFF)
+mark_as_advanced(Hydrogen_ENABLE_VALGRIND)
+if (Hydrogen_ENABLE_VALGRIND)
+  set(EL_ENABLE_VALGRIND ${Hydrogen_ENABLE_VALGRIND})
+endif ()
 
-# Advanced options
-# ----------------
+# Profiling options
 
-if(APPLE)
-  option(HAVE_PACKAGEMAKER "Have Mac OS X PackageMaker?" OFF)
-  mark_as_advanced(HAVE_PACKAGEMAKER)
-endif()
+option(Hydrogen_ENABLE_NVPROF
+  "Search for NVProf and enable related features" OFF)
+option(Hydrogen_ENABLE_VTUNE
+  "Search for VTune and enable related features" OFF)
+option(Hydrogen_ENABLE_SYNCHRONOUS_PROFILING
+  "Perform compute-stream synchronization before beginning profile regions"
+  OFF)
+if (Hydrogen_ENABLE_SYNCHRONOUS_PROFILING)
+  set(HYDROGEN_DEFAULT_SYNC_PROFILING TRUE)
+endif ()
 
-# Whether or not to have the Memory class zero initialize what it allocates.
-# If valgrind was detected and is running, this will be forced anyway.
-option(EL_ZERO_INIT "Initialize buffers to zero by default?" OFF)
-mark_as_advanced(EL_ZERO_INIT)
+# Thread/OpenMP parallelism options
 
-option(EL_DISABLE_VALGRIND "Prevent Elemental from looking for valgrind?" OFF)
-mark_as_advanced(EL_DISABLE_VALGRIND)
+option(Hydrogen_ENABLE_OPENMP
+  "Enable OpenMP support in Hydrogen" OFF)
 
-option(EL_USE_CUSTOM_ALLTOALLV "Avoid MPI_Alltoallv for performance reasons" ON)
-mark_as_advanced(EL_USE_CUSTOM_ALLTOALLV)
+if (Hydrogen_ENABLE_OPENMP)
+  option(Hydrogen_ENABLE_OMP_TASKLOOP
+    "Use taskloops instead of parallel for" OFF)
+endif ()
 
-# Since it is surprisingly common for MPI libraries to have bugs in their
-# support for complex data, the following option forces Elemental to cast
-# all possible MPI communications in terms of twice as many real units of data.
-option(EL_AVOID_COMPLEX_MPI "Avoid potentially buggy complex MPI routines" ON)
-mark_as_advanced(EL_AVOID_COMPLEX_MPI)
+# MPI-related options
 
-# At one point, a bug was found in IBM's C++ compiler for Blue Gene/P,
-# where OpenMP statements of the form a[i] += alpha b[i], with complex data,
-# would segfault and/or return incorrect results
-option(EL_AVOID_OMP_FMA "Avoid a bug in the IBM compilers." OFF)
-mark_as_advanced(EL_AVOID_OMP_FMA)
+# CUDA-aware MPI can provide a benefit, if it works. However, it is
+# often buggy. We can avoid it by setting this to ON.
+option(Hydrogen_AVOID_CUDA_AWARE_MPI "Avoid CUDA-aware MPI" OFF)
 
-# Due to a subtle flaw in the Blue Gene/P extensions for MPICH2, treating
-# floating-point data as a collection of byte-sized objects results in a
-# better algorithm being chosen for MPI_Allgather. This should not effect
-# performance on most machines.
-option(EL_USE_BYTE_ALLGATHERS "Avoid BG/P allgather performance bug." ON)
-mark_as_advanced(EL_USE_BYTE_ALLGATHERS)
+option(Hydrogen_USE_CUSTOM_ALLTOALLV
+  "Avoid MPI_Alltoallv for performance reasons" OFF)
+mark_as_advanced(Hydrogen_USE_CUSTOM_ALLTOALLV)
+if (Hydrogen_USE_CUSTOM_ALLTOALLV)
+  set(EL_USE_CUSTOM_ALLTOALLV ${Hydrogen_USE_CUSTOM_ALLTOALLV})
+endif ()
 
-# If MPI_Reduce_scatter_block doesn't exist, perform it by composing
-# MPI_Allreduce and std::memcpy rather than MPI_Reduce and MPI_Scatter
-option(EL_REDUCE_SCATTER_BLOCK_VIA_ALLREDUCE
-       "AllReduce based block MPI_Reduce_scatter" OFF)
-mark_as_advanced(EL_REDUCE_SCATTER_BLOCK_VIA_ALLREDUCE)
+# Since it is surprisingly common for MPI libraries to have bugs in
+# their support for complex data, the following option forces
+# Elemental to cast all possible MPI communications in terms of twice
+# as many real units of data.
+option(Hydrogen_AVOID_COMPLEX_MPI
+  "Avoid potentially buggy complex MPI routines" OFF)
+mark_as_advanced(Hydrogen_AVOID_COMPLEX_MPI)
+if (Hydrogen_AVOID_COMPLEX_MPI)
+  set(EL_AVOID_COMPLEX_MPI ${Hydrogen_AVOID_COMPLEX_MPI})
+endif ()
 
-# Print a warning any time a redistribution is performed which unpacks a
-# large amount of data with a non-unit stride
-option(EL_CACHE_WARNINGS "Warns when using cache-unfriendly routines" OFF)
-mark_as_advanced(EL_CACHE_WARNINGS)
+# Due to a subtle flaw in the Blue Gene/P extensions for MPICH2,
+# treating floating-point data as a collection of byte-sized objects
+# results in a better algorithm being chosen for MPI_Allgather. This
+# should not effect performance on most machines.
+option(Hydrogen_USE_BYTE_ALLGATHERS
+  "Avoid BG/P allgather performance bug." OFF)
+mark_as_advanced(Hydrogen_USE_BYTE_ALLGATHERS)
+if (Hydrogen_USE_BYTE_ALLGATHERS)
+  set(EL_USE_BYTE_ALLGATHERS ${Hydrogen_USE_BYTE_ALLGATHERS})
+endif ()
 
-# Print a warning when an improperly aligned redistribution is performed,
-# i.e., if an unnecessary permutation communication stage must take place
-option(EL_UNALIGNED_WARNINGS
-       "Warn when performing unaligned redistributions" OFF)
-mark_as_advanced(EL_UNALIGNED_WARNINGS)
+# Runtime feedback options
 
-# Print a warning if an opportunity was missed to implement a redistribution
-# approach specifically for vectors (instead of matrices)
-option(EL_VECTOR_WARNINGS
-       "Warn when vector redistribution chances are missed" OFF)
-mark_as_advanced(EL_VECTOR_WARNINGS)
+# Print a warning any time a redistribution is performed which unpacks
+# a large amount of data with a non-unit stride
+option(Hydrogen_CACHE_WARNINGS
+  "Warns when using cache-unfriendly routines" OFF)
+mark_as_advanced(Hydrogen_CACHE_WARNINGS)
+if (Hydrogen_CACHE_WARNINGS)
+  set(EL_CACHE_WARNINGS ${Hydrogen_CACHE_WARNINGS})
+endif ()
 
-# Build logic
-# ===========
+# Print a warning when an improperly aligned redistribution is
+# performed, i.e., if an unnecessary permutation communication stage
+# must take place
+option(Hydrogen_UNALIGNED_WARNINGS
+  "Warn when performing unaligned redistributions" OFF)
+mark_as_advanced(Hydrogen_UNALIGNED_WARNINGS)
+if (Hydrogen_CACHE_WARNINGS)
+  set(EL_CACHE_WARNINGS ${Hydrogen_UNALIGNED_WARNINGS})
+endif ()
 
-# Add the header file include directories first (so they have priority)
-# ---------------------------------------------------------------------
-message(STATUS
-  "Appending ${PROJECT_SOURCE_DIR}/include for Elemental's source includes")
-include_directories("${PROJECT_SOURCE_DIR}/include")
-message(STATUS
-  "Appending ${PROJECT_BINARY_DIR}/include for Elemental's binary includes")
-include_directories("${PROJECT_BINARY_DIR}/include")
+# Print a warning if an opportunity was missed to implement a
+# redistribution approach specifically for vectors (instead of
+# matrices)
+option(Hydrogen_VECTOR_WARNINGS
+  "Warn when vector redistribution chances are missed" OFF)
+mark_as_advanced(Hydrogen_VECTOR_WARNINGS)
+if (Hydrogen_VECTOR_WARNINGS)
+  set(EL_VECTOR_WARNINGS ${Hydrogen_VECTOR_WARNINGS})
+endif ()
 
-if(BUILD_SHARED_LIBS)
-  set(LIBRARY_TYPE SHARED)
-else()
-  set(LIBRARY_TYPE STATIC)
-endif()
+# Check the compiler features
 
-# Elemental must be built "out-of-source", so we start by ensuring that the
-# source and build directories are different.
-if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
-  message(FATAL_ERROR "In-source build attempted; please clean the CMake cache and then switch to an out-of-source build, e.g.,\nrm CMakeCache.txt && rm -Rf CMakeFiles/\nmkdir build/ && cd build/ && cmake ..")
-endif()
+if (Hydrogen_ENABLE_HALF)
+  find_package(HALF REQUIRED)
+  set(HYDROGEN_HAVE_HALF TRUE)
+endif ()
 
-# Get the Git revision
-include(GetGitRevisionDescription)
-get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+if (Hydrogen_ENABLE_CUDA)
+  enable_language(CUDA)
 
-# Ensure that the build type is set to either Release or Debug
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  # This option is okay as-is
-  set(CMAKE_BUILD_TYPE Release)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # This option is okay as-is
-  set(CMAKE_BUILD_TYPE Debug)
-elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-  message(WARNING "RelWithDebInfo not supported; switching to Release")
-  set(CMAKE_BUILD_TYPE Release)
-elseif(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-  message(WARNING "MinSizeRel not supported; switching to Release")
-  set(CMAKE_BUILD_TYPE Release)
-else()
-  message(WARNING "Build mode not specified, defaulting to Release build.")
-  set(CMAKE_BUILD_TYPE Release)
-endif()
+  find_package(CUDAToolkit REQUIRED)
+  set(H_CUDA_CXX_LIBS
+    CUDA::cudart
+    CUDA::cublas
+    CUDA::cusolver
+    CUDA::nvml)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(EL_RELEASE TRUE)
-else()
-  set(EL_RELEASE FALSE)
-endif()
-string(TOUPPER ${CMAKE_BUILD_TYPE} UPPER_BUILD_TYPE)
+  if (Hydrogen_ENABLE_GPU_TENSOR_MATH)
+    set(HYDROGEN_GPU_USE_TENSOR_OP_MATH TRUE)
+  endif ()
 
-# Set the basic compile flags from the build type
-#
-# The -fcx-fortran-rules GCC option was added due to it leading to a factor of
-# 10 performance difference in the complex Hessenberg QR sweeps. It seems that
-# this option is enabled by default for Clang and Intel compilers (but this
-# assumption is worth checking).
-#
-if(NOT WIN32)
-  set(LANGUAGES CXX C Fortran)
-  foreach(LANG ${LANGUAGES})
-    if(NOT ${LANG}_FLAGS)
-      if(EL_RELEASE)
-        set(LANG_FLAGS_STRING
-          "${LANG} optimization flags for ${UPPER_BUILD_TYPE} mode")
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-          set(${LANG}_FLAGS "-O3 -fcx-fortran-rules"
-            CACHE STRING ${LANG_FLAGS_STRING})
-        elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-          set(${LANG}_FLAGS "-O3 -Wno-tautological-compare"
-            CACHE STRING ${LANG_FLAGS_STRING})
-        else()
-          set(${LANG}_FLAGS "-O3" CACHE STRING ${LANG_FLAGS_STRING})
-        endif()
-      else()
-        set(LANG_FLAGS_STRING
-          "${LANG} optimization/debug flags for ${UPPER_BUILD_TYPE} mode")
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-          set(${LANG}_FLAGS "-O2 -g -fcx-fortran-rules -Wall -Wunused-variable -Wunused-but-set-variable -Wunused-local-typedefs"
-            CACHE STRING ${LANG_FLAGS_STRING})
-        elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-          set(${LANG}_FLAGS "-O2 -g -Wno-tautological-compare"
-            CACHE STRING ${LANG_FLAGS_STRING})
-        else()
-          set(${LANG}_FLAGS "-O2 -g" CACHE STRING ${LANG_FLAGS_STRING})
-        endif()
-      endif()
-    endif()
-  endforeach()
-endif()
+  if (Hydrogen_ENABLE_GPU_FP16)
+    set(HYDROGEN_GPU_USE_FP16 TRUE)
+  endif ()
 
-# Disable the requirement for safe exception handling in MSVC builds
-# (otherwise there are conflicts with OpenBLAS)
-if(MSVC)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SAFESEH:NO")
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /SAFESEH:NO")
-  set(CMAKE_EXE_LINKER_FLAGS_${UPPER_BUILD_TYPE}
-    "${CMAKE_EXE_LINKER_FLAGS_${UPPER_BUILD_TYPE}} /SAFESEH:NO")
-  set(CMAKE_SHARED_LINKER_FLAGS_${UPPER_BUILD_TYPE}
-    "${CMAKE_SHARED_LINKER_FLAGS_${UPPER_BUILD_TYPE}} /SAFESEH:NO")
-  set(CMAKE_MODULE_LINKER_FLAGS_${UPPER_BUILD_TYPE}
-    "${CMAKE_MODULE_LINKER_FLAGS_${UPPER_BUILD_TYPE}} /SAFESEH:NO")
-endif()
+  if (Hydrogen_ENABLE_CUB)
+    if (CUDAToolkit_VERSION_MAJOR LESS 11)
+      find_package(CUB MODULE REQUIRED)
+      set(H_EXTERNAL_CUB TRUE)
+      list(APPEND H_CUDA_CXX_LIBS cuda::cub)
+    endif ()
+    set(HYDROGEN_HAVE_CUB TRUE)
+  endif ()
 
-if(APPLE AND EL_RELEASE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-  NOT EL_IGNORE_OSX_GCC_ALIGNMENT_PROBLEM)
-  # There seems to only be a problem for the 5.x and 6.x series, as 4.9 seems
-  # to be fine, even with -O3 optimization.
-  #
-  # Please see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=35271 for what
-  # appears to be a related (although, now quite dated) issue.
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-    # This version of GCC might be fine; there are issues with GCC exception
-    # handling (at the very least, effecting Homebrew GCC 4.9 on Sierra).
-    message(WARNING "Please ensure that your version of GCC is functioning on this platform. Homebrew GCC 4.9 is known to cause segfaults when C++ exceptions are thrown on OS X Sierra.")
-  else()
-    message(FATAL_ERROR "Due to what appears to be a bug in GCC 5.x and 6.x (you appear to be using GCC ${CMAKE_CXX_COMPILER_VERSION}) enforcement of 16-byte stack alignments when using -O3 on OS X, Release builds with GCC on OS X are currently disabled by default. Please see the comments towards the bottom of https://github.com/elemental/Elemental/issues/181 for more details. If you know what you're doing, feel free to rebuild with -D EL_IGNORE_OSX_GCC_ALIGNMENT_PROBLEM=ON")
-  endif()
-endif()
+  if (Hydrogen_ENABLE_NVPROF)
+    if (TARGET CUDA::nvToolsExt)
+      list(APPEND H_CUDA_CXX_LIBS CUDA::nvToolsExt)
+    else ()
+      find_package(NVTX MODULE REQUIRED)
+      set(H_EXTERNAL_NVTX TRUE)
+      list(APPEND H_CUDA_CXX_LIBS cuda::nvtx)
+    endif ()
+    set(HYDROGEN_HAVE_NVPROF TRUE)
+  endif ()
 
-# Handle RPATHs for Mac
-# ---------------------
-if(APPLE)
-  set(CMAKE_MACOSX_RPATH TRUE)
+  set(HYDROGEN_HAVE_CUDA TRUE)
 
-  # use, i.e. don't skip the full RPATH for the build tree
-  set(CMAKE_SKIP_BUILD_RPATH FALSE)
+endif (Hydrogen_ENABLE_CUDA)
 
-  # when building, don't use the install RPATH already
-  # (but later on when installing)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+if (Hydrogen_ENABLE_ROCM)
+  # This *must* come first!
+  find_package(hip CONFIG REQUIRED)
 
-  # Add automatically determined parts of RPATH which point to directories
-  # outside the build tree to the install RPATH
-  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  enable_language(HIP)
 
-  # RPATH to be used when installing, but only if it's not a system directory
-  list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
-    "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-  if("${isSystemDir}" STREQUAL "-1")
-    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-  endif()
-endif()
+  if (Hydrogen_ENABLE_CUB)
+    find_package(hipcub REQUIRED)
+    set(HYDROGEN_HAVE_CUB TRUE)
+  else ()
+    set(HYDROGEN_HAVE_CUB FALSE)
+  endif ()
 
-# Detect Fortran
-# --------------
-include(detect/Fortran)
+  find_package(rocblas CONFIG REQUIRED)
+  find_package(rocsolver CONFIG REQUIRED)
+  find_package(rocthrust CONFIG REQUIRED)
 
-# Detect C++11
-# ------------
+  set(HYDROGEN_HAVE_ROCM TRUE)
+  message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
+
+  set(H_ROCM_CXX_LIBS
+    hip::host
+    hip::hipcub
+    roc::rocblas
+    roc::rocsolver
+    roc::rocthrust)
+
+  set(H_ROCM_HIP_LIBS
+    hip::device)
+endif (Hydrogen_ENABLE_ROCM)
+
+if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
+  set(HYDROGEN_HAVE_GPU TRUE)
+endif ()
+
+if (Hydrogen_ENABLE_ALUMINUM)
+  find_package(Aluminum 1.0.0 CONFIG QUIET)
+  if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
+    message(STATUS
+      "A candidate Aluminum > v1.0.0 was found, but was not selected:")
+    message(STATUS
+      "  ${Aluminum_NOT_FOUND_MESSAGE}")
+  endif ()
+  # Try again, since we're technically ok with >v0.7.0
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum 0.7.0 CONFIG QUIET)
+    if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
+      message(STATUS
+        "A candidate Aluminum > v0.7.0 was found, but was not selected:")
+      message(STATUS
+        "  ${Aluminum_NOT_FOUND_MESSAGE}")
+    endif ()
+  endif ()
+
+  if (Aluminum_FOUND)
+    set(HYDROGEN_HAVE_ALUMINUM TRUE)
+    message(STATUS
+      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+      set(HYDROGEN_HAVE_NCCL2 TRUE)
+      message(STATUS "Aluminum detected with NCCL2 backend support.")
+    else ()
+      set(HYDROGEN_HAVE_NCCL2 FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+      message(STATUS "Aluminum detected with HostTransfer backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+      set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
+      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+  else ()
+    message(FATAL_ERROR "Aluminum support requested but not found. "
+      "Please set Aluminum_DIR to point to the installation prefix "
+      "for Aluminum.")
+  endif (Aluminum_FOUND)
+endif (Hydrogen_ENABLE_ALUMINUM)
+
+# Sets up EL_RESTRICT and EL_HAVE_PRETTY_FUNCTION
 include(detect/CXX)
-set(CXX_FLAGS "${CXX_FLAGS} ${CXX14_COMPILER_FLAGS}")
 
-# Detect MPI
-# ----------
-include(detect/MPI)
-message(STATUS "Appending ${MPI_C_INCLUDE_PATH} for MPI headers")
-include_directories(${MPI_C_INCLUDE_PATH})
-set(CXX_FLAGS "${CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+# Other TPLs
 
-# Detect OpenMP
-# -------------
-include(detect/OpenMP)
-if(EL_HYBRID)
-  set(CXX_FLAGS "${CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
+if (Hydrogen_ENABLE_VTUNE)
+  find_package(VTUNE REQUIRED)
+  set(HYDROGEN_HAVE_VTUNE TRUE)
+else ()
+  set(HYDROGEN_HAVE_VTUNE FALSE)
+endif ()
 
-# Detect Qt5
-# ----------
-include(detect/Qt5)
-if(EL_HAVE_QT5)
-  set(CXX_FLAGS "${CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
-endif()
+if (Hydrogen_ENABLE_OPENMP)
+  include(FindAndVerifyOpenMP)
+  if (OpenMP_FOUND)
+    set(EL_HYBRID ON)
+  else ()
+    message(WARNING "Requested OpenMP support but OpenMP support was either "
+      "not found or not functional.")
+    set(EL_HYBRID OFF)
+    set(Hydrogen_ENABLE_OPENMP OFF)
+  endif ()
+endif (Hydrogen_ENABLE_OPENMP)
 
-# Allow valgrind support if possible (if running valgrind, explicitly zero init)
-# ------------------------------------------------------------------------------
-if(NOT EL_DISABLE_VALGRIND)
-  include(FindValgrind)
-  if(VALGRIND_FOUND)
-    message(STATUS "Appending ${VALGRIND_INCLUDE_DIR} for Valgrind headers")
-    include_directories(${VALGRIND_INCLUDE_DIR})
-    list(APPEND EXTERNAL_INCLUDE_DIRS ${VALGRIND_INCLUDE_DIR})
-    set(EL_HAVE_VALGRIND TRUE)
-  endif()
-endif()
+include(FindAndVerifyMPI)
+include(FindAndVerifyLAPACK)
+include(FindAndVerifyExtendedPrecision)
 
-# Import several external math libraries (e.g., BLAS/LAPACK/METIS/ParMETIS)
-# -------------------------------------------------------------------------
-include(external_projects/ElMath)
+# Catch2
+if (Hydrogen_ENABLE_UNIT_TESTS)
+  find_package(Catch2 2.0.0 CONFIG REQUIRED)
+  include(Catch)
+endif ()
 
-# Now that testing is done, set the CXX build and link flags
-# ----------------------------------------------------------
-set(CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE} ${CXX_FLAGS})
-set(EL_LINK_FLAGS)
-if(MPI_CXX_LINK_FLAGS)
-  set(EL_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
-endif()
-if(EL_BUILT_BLIS_LAPACK)
-  if(EL_LINK_FLAGS)
-    set(EL_LINK_FLAGS "${EL_LINK_FLAGS} ${OpenMP_CXX_FLAGS}")
-  else()
-    set(EL_LINK_FLAGS ${OpenMP_CXX_FLAGS})
-  endif()
-endif()
+# Get the source files
 
-# Elemental's mod's of Parallel Multiple Relatively Robust Representations
-# ------------------------------------------------------------------------
-add_subdirectory(external/pmrrr)
-if(EL_BUILT_SCALAPACK)
-  add_dependencies(pmrrr project_scalapack)
-else()
-  if(EL_BUILT_BLIS_LAPACK)
-    add_dependencies(pmrrr project_blis_lapack)
-  endif()
-  if(EL_BUILT_OPENBLAS)
-    add_dependencies(pmrrr project_openblas)
-  endif()
-endif()
+# Macro for setting up full paths
+macro(set_full_path VAR)
+  unset(__tmp_names)
+  foreach(filename ${ARGN})
+    unset(__name)
+    get_filename_component(__name "${filename}" ABSOLUTE)
+    list(APPEND __tmp_names "${__name}")
+  endforeach()
+  set(${VAR} "${__tmp_names}")
+endmacro()
 
-# Elemental's modifications of (a subset of) SuiteSparse
-# ------------------------------------------------------
-add_subdirectory(external/suite_sparse)
-include_directories(external/suite_sparse/include)
+set(HYDROGEN_HEADERS)
+set(HYDROGEN_SOURCES)
+add_subdirectory(include)
+add_subdirectory(src)
 
-# Create a file which can be included in Makefile's.
-# This is meant to be analogous to PETSc's 'conf/petscvariables' file
-include(CreateElVars)
-
-# The main library
-# ================
-
-# Get the combined list of source files for Elemental
-# ---------------------------------------------------
-file(GLOB_RECURSE EL_C_CPP_SOURCE RELATIVE "${PROJECT_SOURCE_DIR}"
-  "src/*.c" "src/*.cpp" "include/*.h" "include/*.hpp" )
-if(EL_HAVE_QT5)
-  set(EL_HEADERS_PREMOC
-    "include/El/io/DisplayWindow-premoc.hpp;include/El/io/ComplexDisplayWindow-premoc.hpp")
-  qt_wrap_cpp(El EL_MOC_SRC ${EL_HEADERS_PREMOC})
-  message(STATUS "Appending ${Qt5Widgets_INCLUDE_DIRS} for Qt5 headers")
-  include_directories(${Qt5Widgets_INCLUDE_DIRS})
-  add_definitions(${Qt5Widgets_DEFINITIONS})
-
-  # Qt5Widgets_DIR = Qt5_LIBDIR/cmake/Qt5Widgets
-  get_filename_component(Qt5_CMAKEDIR ${Qt5Widgets_DIR} PATH)
-  get_filename_component(Qt5_LIBDIR ${Qt5_CMAKEDIR} PATH)
-
-  set(EL_C_CPP_FILES "${EL_C_CPP_SOURCE};${EL_MOC_SRC}")
-else()
-  set(EL_C_CPP_FILES "${EL_C_CPP_SOURCE}")
-endif()
-
-# Handle the header preparation and installation
-# ----------------------------------------------
+# Setup the configuration files for both "Elemental" and
+# "Hydrogen". There's also one for Doxygen for building "build tree"
+# docs (which has the advantage that preprocessing will take
+# "{,hydrogen_}config.h" into consideration).
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/config.h.in"
-               "${PROJECT_BINARY_DIR}/include/El/config.h")
-install(FILES "${PROJECT_BINARY_DIR}/include/El/config.h"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/El)
-add_custom_target(El_config DEPENDS "${PROJECT_BINARY_DIR}/include/El/config.h")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+  "${PROJECT_BINARY_DIR}/include/El/config.h")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in"
+  "${PROJECT_BINARY_DIR}/include/El/hydrogen_config.h")
+configure_file("${PROJECT_SOURCE_DIR}/doxy/Doxyfile.in"
+  "${PROJECT_BINARY_DIR}/doxy/Doxyfile")
 
-# Define the main library for Elemental
-# -------------------------------------
-add_library(El ${EL_C_CPP_FILES})
-set_target_properties(El PROPERTIES VERSION ${EL_VERSION_MINOR}
-  SOVERSION ${EL_VERSION_MAJOR})
-add_dependencies(El El_config)
-if(EL_BUILT_SCALAPACK)
-  add_dependencies(El project_scalapack)
-else()
-  if(EL_BUILT_BLIS_LAPACK)
-    add_dependencies(El project_blis_lapack)
-  endif()
-  if(EL_BUILT_OPENBLAS)
-    add_dependencies(El project_openblas)
-  endif()
-endif()
-if(EL_BUILT_METIS)
-  add_dependencies(El project_metis)
-endif()
-if(EL_BUILT_PARMETIS)
-  add_dependencies(El project_parmetis)
-endif()
-set(LINK_LIBS pmrrr ElSuiteSparse
-  ${EXTERNAL_LIBS} ${MATH_LIBS} ${MPI_CXX_LIBRARIES})
-if(EL_HAVE_QT5)
-  set(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES})
-endif()
-target_link_libraries(El ${LINK_LIBS})
-if(EL_LINK_FLAGS)
-  set_target_properties(El PROPERTIES LINK_FLAGS ${EL_LINK_FLAGS})
-endif()
-target_include_directories(El INTERFACE ${EXTERNAL_INCLUDE_DIRS})
-install(TARGETS El EXPORT ElementalTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+add_library(Hydrogen_CXX "${HYDROGEN_SOURCES}" "${HYDROGEN_HEADERS}")
+target_include_directories(Hydrogen_CXX PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/El>
+  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 
-# Decide if/how to install the Python interface
-# ---------------------------------------------
-if(BUILD_SHARED_LIBS)
-  # Create the environment file for Python which hardcodes the installation dir
-  configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/environment.py.in"
-                 "${PROJECT_BINARY_DIR}/python/core/environment.py")
-  if(INSTALL_PYTHON_PACKAGE)
-    if(NOT PYTHON_SITE_PACKAGES)
-      if(INSTALL_PYTHON_INTO_USER_SITE)
-        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
-          "import site; print site.USER_SITE"
-          OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
-      else()
-        execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
-          "from distutils.sysconfig import get_python_lib; print get_python_lib()"
-          OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
-      endif()
-      set(PYTHON_SITE_PACKAGES "${PYTHON_SITE_PACKAGES}"
-        CACHE PATH "Destination for Python site package directory")
-    endif()
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/"
-      DESTINATION "${PYTHON_SITE_PACKAGES}/El"
-      FILES_MATCHING PATTERN "*.py")
-    install(FILES "${PROJECT_BINARY_DIR}/python/core/environment.py"
-      DESTINATION "${PYTHON_SITE_PACKAGES}/El/core")
-  else()
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/python/"
-      DESTINATION python/El
-      FILES_MATCHING PATTERN "*.py")
-    install(FILES "${PROJECT_BINARY_DIR}/python/core/environment.py"
-      DESTINATION python/El/core)
-  endif()
-endif()
-if(BINARY_SUBDIRECTORIES)
-   set(EXPERIMENTAL_INSTALL_DIR experimental/g3d)
-endif()
-# Experimental
-# ============
-# NOTE: This is insanely outdated
-if(EL_EXPERIMENTAL)
-  set(EXPERIMENTAL_DIR "${PROJECT_SOURCE_DIR}/experimental")
-  # Build the G3D example(s)
-  set(G3D_EXPERS G3DGemm)
-  set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/experimental/g3d")
-  foreach(EXPER ${G3D_EXPERS})
-    set(DRIVER "${EXPERIMENTAL_DIR}/g3d/${EXPER}.cpp")
-    add_executable(experimental-g3d-${EXPER} "${DRIVER}")
-    set_source_files_properties("${DRIVER}" PROPERTIES
-      OBJECT_DEPENDS "${PREPARED_HEADERS}")
-    target_link_libraries(experimental-g3d-${EXPER} El)
-    set_target_properties(experimental-g3d-${EXPER} PROPERTIES
-      OUTPUT_NAME ${EXPER}
-      SUFFIX "${CMAKE_EXECUTABLE_SUFFIX_CXX}"
-      RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
-    if(EL_LINK_FLAGS)
-      set_target_properties(experimental-g3d-${EXPER} PROPERTIES
-        LINK_FLAGS ${EL_LINK_FLAGS})
-    endif()
-    install(TARGETS experimental-g3d-${EXPER} DESTINATION ${CMAKE_INSTALL_BINDIR}/${EXPERIMENTAL_INSTALL_DIR})
-  endforeach()
-endif()
+# For now, add all flags regardless of "developer" or not.
+foreach (_FLAG IN LISTS __CXX_FLAGS __CXX_DEVELOPER_FLAGS)
+  check_compiler_flag(CXX "${_FLAG}" CXX_COMPLER_HAS_FLAG_${_FLAG})
+  if (CXX_COMPILER_HAS_FLAG_${_FLAG})
+    target_compile_options(Hydrogen_CXX PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:${_FLAG}>)
+  endif ()
+endforeach ()
 
-# Install data
-# ============
-# TODO(poulson): Also install into the build directory? How to have drivers
-# automatically find the right path?
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/data/"
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/elemental/ FILES_MATCHING PATTERN "*.*")
+target_link_libraries(
+  Hydrogen_CXX PUBLIC
+  ${Aluminum_LIBRARIES}
+  ${HALF_LIBRARIES}
+  ${VTUNE_LIBRARIES}
+  ${NVTX_LIBRARIES}
+  $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
+  $<TARGET_NAME_IF_EXISTS:MPI::MPI_CXX>
+  $<TARGET_NAME_IF_EXISTS:LAPACK::lapack>
+  $<TARGET_NAME_IF_EXISTS:EP::extended_precision>
 
-# Install license and author information
-# ======================================
-install(FILES
-  "${PROJECT_SOURCE_DIR}/AUTHORS"
-  "${PROJECT_SOURCE_DIR}/LICENSE"
-  "${PROJECT_SOURCE_DIR}/PUBLICATIONS.bib"
-  "${PROJECT_SOURCE_DIR}/README.md"
-  "${PROJECT_SOURCE_DIR}/REFERENCES.bib"
-  DESTINATION ${CMAKE_INSTALL_DOCDIR})
+  ${H_CUDA_CXX_LIBS}
+  ${H_ROCM_CXX_LIBS}
+  )
 
-# Tests and examples
-# ==================
-include(CTest)
+set_target_properties(Hydrogen_CXX
+  PROPERTIES
+  VERSION ${HYDROGEN_VERSION})
 
-# Sandbox test
-# ------------
-install(FILES "${PROJECT_SOURCE_DIR}/sandbox/Makefile"
-  DESTINATION ${CMAKE_INSTALL_DOCDIR}/sandbox)
-install(FILES "${PROJECT_SOURCE_DIR}/sandbox/test.cpp"
-  DESTINATION ${CMAKE_INSTALL_DOCDIR}/sandbox)
-add_executable(sandbox-test "${PROJECT_SOURCE_DIR}/sandbox/test.cpp")
-set_source_files_properties("${PROJECT_SOURCE_DIR}/sandbox/test.cpp"
-  PROPERTIES OBJECT_DEPENDS "${PREPARED_HEADERS}")
-target_link_libraries(sandbox-test El)
-set_target_properties(sandbox-test PROPERTIES
-  OUTPUT_NAME sandbox-test
-  SUFFIX "${CMAKE_EXECUTABLE_SUFFIX_CXX}"
-  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-if(EL_LINK_FLAGS)
-  set_target_properties(sandbox-test PROPERTIES LINK_FLAGS ${EL_LINK_FLAGS})
-endif()
+if (NOT CMAKE_CXX_STANDARD)
+  set_target_properties(Hydrogen_CXX
+    PROPERTIES
+    CXX_STANDARD 17)
+endif ()
 
-# Test drivers
-# ------------
-if(EL_TESTS)
-  set(TEST_DIR "${PROJECT_SOURCE_DIR}/tests")
-  set(TEST_TYPES core blas_like lapack_like optimization)
-  foreach(TYPE ${TEST_TYPES})
-    file(GLOB_RECURSE ${TYPE}_TESTS
-      RELATIVE "${PROJECT_SOURCE_DIR}/tests/${TYPE}/" "tests/${TYPE}/*.cpp")
+# Add the CXX library to "Hydrogen"
+set(HYDROGEN_LIBRARIES Hydrogen_CXX)
 
-    set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/tests/${TYPE}")
-    foreach(TEST ${${TYPE}_TESTS})
-      set(DRIVER "${TEST_DIR}/${TYPE}/${TEST}")
-      get_filename_component(TESTNAME ${TEST} NAME_WE)
-      add_executable(tests-${TYPE}-${TESTNAME} "${DRIVER}")
-      set_source_files_properties("${DRIVER}" PROPERTIES
-        OBJECT_DEPENDS "${PREPARED_HEADERS}")
-      target_link_libraries(tests-${TYPE}-${TESTNAME} El)
-      if(BINARY_SUBDIRECTORIES)
-        set(TEST_INSTALL_DIR test/${TYPE})
-        set(TEST_OUTPUT_NAME ${TESTNAME})
-      else()
-        set(TEST_OUTPUT_NAME tests-${TYPE}-${TESTNAME})
-      endif()
-      set_target_properties(tests-${TYPE}-${TESTNAME} PROPERTIES
-        OUTPUT_NAME ${TEST_OUTPUT_NAME}
-        SUFFIX "${CMAKE_EXECUTABLE_SUFFIX_CXX}"
-        RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
-      if(EL_LINK_FLAGS)
-        set_target_properties(tests-${TYPE}-${TESTNAME} PROPERTIES
-          LINK_FLAGS ${EL_LINK_FLAGS})
-      endif()
-      install(TARGETS tests-${TYPE}-${TESTNAME}
-        DESTINATION ${CMAKE_INSTALL_BINDIR}/${TEST_INSTALL_DIR})
-      if(NOT TESTNAME STREQUAL "SparseLDLRange") #Skip tests that can time out
-        add_test(NAME Tests/${TYPE}/${TESTNAME}
-          WORKING_DIRECTORY "${OUTPUT_DIR}"
-          COMMAND tests-${TYPE}-${TESTNAME} -platform offscreen)
-      endif()
-    endforeach()
-  endforeach()
-endif()
+if (HYDROGEN_HAVE_CUDA)
+  add_library(Hydrogen_CUDA "${HYDROGEN_GPU_SOURCES}")
+  target_include_directories(Hydrogen_CUDA PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
-# Examples
-# --------
-if(EL_EXAMPLES)
-  set(EXAMPLE_DIR "${PROJECT_SOURCE_DIR}/examples")
-  set(EXAMPLE_TYPES
-      optimization core blas_like interface io lapack_like matrices
-      number_theory)
-  foreach(TYPE ${EXAMPLE_TYPES})
-    if(EL_C_INTERFACE)
-      file(GLOB_RECURSE ${TYPE}_EXAMPLES RELATIVE
-           "${PROJECT_SOURCE_DIR}/examples/${TYPE}/"
-           "examples/${TYPE}/*.cpp"
-           "examples/${TYPE}/*.c" )
-    else()
-      file(GLOB_RECURSE ${TYPE}_EXAMPLES RELATIVE
-           "${PROJECT_SOURCE_DIR}/examples/${TYPE}/"
-           "examples/${TYPE}/*.cpp")
-    endif()
-    set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/examples/${TYPE}")
-    foreach(EXAMPLE ${${TYPE}_EXAMPLES})
-      set(DRIVER "${EXAMPLE_DIR}/${TYPE}/${EXAMPLE}")
-      get_filename_component(EXNAME ${EXAMPLE} NAME_WE)
-      add_executable(examples-${TYPE}-${EXNAME} "${DRIVER}")
-      set_source_files_properties("${DRIVER}" PROPERTIES
-        OBJECT_DEPENDS "${PREPARED_HEADERS}")
-      target_link_libraries(examples-${TYPE}-${EXNAME} El)
-      if(BINARY_SUBDIRECTORIES)
-        set(EXAMPLE_INSTALL_DIR examples/${TYPE})
-        set(EXAMPLE_OUTPUT_NAME ${EXNAME})
-      else()
-        set(EXAMPLE_OUTPUT_NAME examples-${TYPE}-${EXNAME})
-      endif()
-      set_target_properties(examples-${TYPE}-${EXNAME} PROPERTIES
-        OUTPUT_NAME ${EXAMPLE_OUTPUT_NAME}
-        SUFFIX "${CMAKE_EXECUTABLE_SUFFIX_CXX}"
-        RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
-      if(EL_LINK_FLAGS)
-        set_target_properties(examples-${TYPE}-${EXNAME} PROPERTIES
-          LINK_FLAGS ${EL_LINK_FLAGS})
-      endif()
-      install(TARGETS examples-${TYPE}-${EXNAME}
-        DESTINATION ${CMAKE_INSTALL_BINDIR}/${EXAMPLE_INSTALL_DIR})
-      add_test(NAME Examples/${TYPE}/${EXNAME}
-        WORKING_DIRECTORY "${OUTPUT_DIR}"
-        COMMAND examples-${TYPE}-${EXNAME} -platform offscreen)
-    endforeach()
-  endforeach()
-endif()
+  target_link_libraries(Hydrogen_CUDA
+    PUBLIC
+    ${HALF_LIBRARIES})
 
-# CPack
-# =====
-# While PackageMaker is deprecated, productbuild is not yet supported by CPack.
-# Furthermore, it is possible to download the "Late July 2012" version of
-# PackageMaker (which curiously has a release date of August 7, 2012) from
-# Apple, but it appears to be incompatible with Yosemite.
-#
-# Lastly, the current CPack configuration does not yet allow the Python
-# interface to be installed within a different directory than the main library
-# (e.g., into the user-level or system-wide site-packages directory).
-set(CPACK_PACKAGE_NAME "Elemental")
-set(CPACK_PACKAGE_VENDOR "libelemental.org")
-set(CPACK_PACKAGE_VERSION_MAJOR ${EL_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${EL_VERSION_MINOR})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-  "Distributed-memory linear algebra and optimization")
-set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/cmake/El.png")
-include(CPack)
+  foreach (_FLAG IN LISTS __CUDA_FLAGS __CUDA_DEVELOPER_FLAGS)
+    check_compiler_flag(CUDA "${_FLAG}" CUDA_COMPLER_HAS_FLAG_${_FLAG})
+    if (CUDA_COMPILER_HAS_FLAG_${_FLAG})
+      target_compile_options(Hydrogen_CUDA PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:${_FLAG}>)
+    endif ()
+  endforeach ()
 
-# ProjectConfig
-# =====
-# Create ElementalConfig.cmake for find_package.
-# Add all targets to the build-tree export set
-export(TARGETS El pmrrr ElSuiteSparse
-  FILE "${PROJECT_BINARY_DIR}/ElementalTargets.cmake")
+  set_target_properties(Hydrogen_CUDA
+    PROPERTIES
+    VERSION ${HYDROGEN_VERSION})
 
-if(NOT CMAKE_EXPORT_NO_PACKAGE_REGISTRY)
-  # Export the package for use from the build-tree
-  # (this registers the build-tree with a global CMake-registry).
-  #
-  # While the NOT CMAKE_EXPORT_NO_PACKAGE_REGISTRY guard would seem to be
-  # redundant, the option was only added circa CMake 3.4.3, and so, rather than
-  # requiring such a new version of CMake entirely for a binary decision, we
-  # can instead manually circumvent the export.
-  export(PACKAGE Elemental)
-endif()
+  if (NOT CMAKE_CUDA_STANDARD)
+    set_target_properties(Hydrogen_CUDA
+      PROPERTIES CUDA_STANDARD 17)
+  endif ()
 
-# Create the ElementalConfig.cmake and ElementalConfigVersion files
-file(RELATIVE_PATH REL_INCLUDE_DIR "${PROJECT_BINARY_DIR}"
-  "${PROJECT_BINARY_DIR}/include")
-# ... for the build tree
+  target_link_libraries(Hydrogen_CXX PUBLIC Hydrogen_CUDA)
+  list(APPEND HYDROGEN_LIBRARIES Hydrogen_CUDA)
+endif ()
+
+if (HYDROGEN_HAVE_ROCM)
+  add_library(Hydrogen_ROCM STATIC "${HYDROGEN_GPU_SOURCES}")
+
+  # HIP files use the ".hip" extension. Since we don't want to copy
+  # these files, we have to explicitly set their language to be HIP.
+  get_target_property(H_HIP_SOURCES Hydrogen_ROCM SOURCES)
+  set_source_files_properties(${H_HIP_SOURCES}
+    PROPERTIES LANGUAGE HIP)
+
+  target_include_directories(Hydrogen_ROCM PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    )
+
+  target_link_libraries(Hydrogen_ROCM PUBLIC
+    ${HALF_LIBRARIES}
+    ${ROCBLAS_LIBRARIES}
+    )
+
+  set_target_properties(Hydrogen_ROCM
+    PROPERTIES
+    VERSION ${HYDROGEN_VERSION})
+
+  foreach (_FLAG IN LISTS __HIP_FLAGS __HIP_DEVELOPER_FLAGS)
+    check_compiler_flag(HIP "${_FLAG}" HIP_COMPLER_HAS_FLAG_${_FLAG})
+    if (HIP_COMPILER_HAS_FLAG_${_FLAG})
+      target_compile_options(Hydrogen_ROCM PRIVATE
+        $<$<COMPILE_LANGUAGE:HIP>:${_FLAG}>)
+    endif ()
+  endforeach ()
+
+  #set_target_properties(Hydrogen_ROCM PROPERTIES LINKER_LANGUAGE CXX)
+  list(APPEND HYDROGEN_LIBRARIES Hydrogen_ROCM)
+endif ()
+
+# Setup the tests
+if (Hydrogen_ENABLE_TESTING OR Hydrogen_ENABLE_UNIT_TESTS)
+  include(CTest)
+endif ()
+
+if (Hydrogen_ENABLE_TESTING)
+  add_subdirectory(tests)
+endif ()
+
+if (Hydrogen_ENABLE_UNIT_TESTS)
+  add_subdirectory(unit_test)
+endif ()
+
+# Setup the library install
+install(TARGETS ${HYDROGEN_LIBRARIES}
+  EXPORT HydrogenTargets
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  INCLUDES DESTINATION include/El
+  )
+
+# Install target stuff
+include (CMakePackageConfigHelpers)
+
+# Write the version file for both the build and the install tree
 configure_file(
-  "${PROJECT_SOURCE_DIR}/cmake/configure_files/ElementalConfig.cmake.in"
-  "${PROJECT_BINARY_DIR}/ElementalConfig.cmake" @ONLY)
-# ... for both
-configure_file(
-  "${PROJECT_SOURCE_DIR}/cmake/configure_files/ElementalConfigVersion.cmake.in"
-  "${PROJECT_BINARY_DIR}/ElementalConfigVersion.cmake" @ONLY)
+  "${CMAKE_SOURCE_DIR}/cmake/configure_files/HydrogenConfigVersion.cmake.in"
+  "${CMAKE_BINARY_DIR}/HydrogenConfigVersion.cmake"
+  @ONLY)
 
-# Install the ElementalConfig.cmake and ElementalConfigVersion.cmake
+# Write the configure file for the build tree
+set(INCLUDE_INSTALL_DIRS "${CMAKE_SOURCE_DIR}/include"
+  "${CMAKE_SOURCE_DIR}/include"
+  "${CMAKE_SOURCE_DIR}/include/El"
+  "${CMAKE_BINARY_DIR}/include/El")
+set(LIB_INSTALL_DIR "${CMAKE_BINARY_DIR}")
+set(EXTRA_CMAKE_MODULE_DIR "${CMAKE_SOURCE_DIR}/cmake/modules")
+configure_package_config_file(cmake/configure_files/HydrogenConfig.cmake.in
+  "${CMAKE_BINARY_DIR}/HydrogenConfig.cmake"
+  INSTALL_DESTINATION "${CMAKE_BINARY_DIR}"
+  PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
+
+# Build tree export
+export(EXPORT HydrogenTargets NAMESPACE H:: FILE HydrogenTargets.cmake)
+
+# Write the configure file for the install tree
+set(INCLUDE_INSTALL_DIRS include)
+set(LIB_INSTALL_DIR lib)
+set(CMAKE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hydrogen)
+set(EXTRA_CMAKE_MODULE_DIR)
+configure_package_config_file(
+  cmake/configure_files/HydrogenConfig.cmake.in
+  "${CMAKE_BINARY_DIR}/cmake/HydrogenConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_DIR}
+  PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
+
+# Install the configuration headers
 install(FILES
-  "${PROJECT_BINARY_DIR}/ElementalConfig.cmake"
-  "${PROJECT_BINARY_DIR}/ElementalConfigVersion.cmake"
-  DESTINATION "${INSTALL_CMAKE_DIR}/elemental" COMPONENT dev)
+  "${PROJECT_BINARY_DIR}/include/El/config.h"
+  "${PROJECT_BINARY_DIR}/include/El/hydrogen_config.h"
+  DESTINATION "include/El")
 
-install(EXPORT ElementalTargets
-  DESTINATION "${INSTALL_CMAKE_DIR}/elemental" COMPONENT dev)
+# Install tree export
+install(EXPORT HydrogenTargets
+  NAMESPACE H::
+  DESTINATION ${CMAKE_INSTALL_DIR})
+
+# Install the headers
+install(DIRECTORY include DESTINATION .
+  FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h")
+
+# Install the cmake stuff
+install(FILES
+  "${PROJECT_BINARY_DIR}/cmake/HydrogenConfig.cmake"
+  "${PROJECT_BINARY_DIR}/HydrogenConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_DIR})
+install(DIRECTORY cmake/modules DESTINATION ${CMAKE_INSTALL_DIR}
+  FILES_MATCHING PATTERN "*.cmake")
+
+# Summarize this configuration
+if (NOT __dont_print_summary)
+  include(PrintHydrogenSummary)
+  print_full_hydrogen_summary(
+    VERSION_VARIABLES
+    HYDROGEN_VERSION
+    HYDROGEN_GIT_VERSION
+    HYDROGEN_LATEST_SHA
+    HYDROGEN_LATEST_HYDROGEN_SHA
+
+    PATH_VARIABLES
+    CMAKE_CXX_COMPILER
+    CMAKE_CUDA_COMPILER
+    CMAKE_CUDA_HOST_COMPILER
+    MPI_CXX_COMPILER
+    CMAKE_INSTALL_PREFIX
+    CMAKE_SOURCE_DIR
+    CMAKE_BINARY_DIR
+
+    STRING_VARIABLES
+    CMAKE_BUILD_TYPE
+    CMAKE_CUDA_FLAGS
+    CMAKE_CXX_FLAGS
+    HYDROGEN_BLAS_SUFFIX
+    HYDROGEN_LAPACK_SUFFIX
+
+    BOOLEAN_VARIABLES
+    BUILD_SHARED_LIBS
+    Hydrogen_ENABLE_TESTING
+    HYDROGEN_HAVE_QUADMATH
+    HYDROGEN_HAVE_QD
+    HYDROGEN_HAVE_GMP
+    HYDROGEN_HAVE_MPFR
+    HYDROGEN_HAVE_MPC
+    HYDROGEN_HAVE_ALUMINUM
+    HYDROGEN_HAVE_NCCL2
+    HYDROGEN_HAVE_AL_MPI_CUDA
+    HYDROGEN_HAVE_CUDA
+    HYDROGEN_HAVE_ROCM
+    HYDROGEN_HAVE_CUB
+    HYDROGEN_HAVE_OMP_TASKLOOP
+    HYDROGEN_HAVE_CUDA_AWARE_MPI
+    HYDROGEN_ENSURE_HOST_MPI_BUFFERS
+    HYDROGEN_HAVE_OPENBLAS
+    HYDROGEN_HAVE_LAPACK
+    HYDROGEN_HAVE_MKL
+    HYDROGEN_HAVE_MKL_GEMMT
+    EL_USE_64BIT_INTS
+    EL_USE_64BIT_BLAS_INTS
+    EL_ZERO_INIT
+    EL_HAVE_VALGRIND
+    EL_HYBRID
+    EL_HAVE_OPENMP
+    EL_HAVE_OMP_COLLAPSE
+    EL_HAVE_OMP_SIMD
+    EL_USE_CUSTOM_ALLTOALLV
+    EL_AVOID_COMPLEX_MPI
+    EL_USE_BYTE_ALLGATHERS
+    EL_CACHE_WARNINGS
+    EL_VECTOR_WARNINGS
+
+    PRINT_EMPTY_VARIABLES
+    )
+  set(__dont_print_summary ON CACHE INTERNAL "" FORCE)
+  # Only print the configuration on initial configuration
+endif ()

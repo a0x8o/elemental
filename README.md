@@ -1,17 +1,33 @@
+<<<<<<< HEAD
+# Hydrogen
+=======
 <p align="left" style="padding: 20px">
 <img src="https://github.com/elemental/elemental-web/raw/master/source/_static/elemental.png">
 </p>
+>>>>>>> 6eb15a0da (Update README.md)
 
-[![Build Status](https://api.travis-ci.org/elemental/Elemental.svg?branch=master)](https://travis-ci.org/elemental/Elemental)
-[![Join the chat at https://gitter.im/elemental/chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/elemental/chat?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Hydrogen is a fork of
+[Elemental](https://github.com/elemental/elemental) used by
+[LBANN](https://github.com/llnl/lbann). Hydrogen is a redux of the
+Elemental functionality that has been ported to make use of GPGPU
+accelerators. The supported functionality is essentially the core
+infrastructure plus BLAS-1 and BLAS-3.
 
-**Elemental** is a modern C++ library for distributed-memory dense and
-sparse-direct linear algebra, conic optimization, and lattice reduction.
-The library was initially released in
-[Elemental: A new framework for distributed memory dense linear algebra](https://dl.acm.org/citation.cfm?doid=2427023.2427030)
-and absorbed, then greatly expanded upon, the functionality from the 
-sparse-direct solver [Clique](http://www.github.com/poulson/Clique.git), which 
-was originally released during a project on [Parallel Sweeping Preconditioners](http://epubs.siam.org/doi/abs/10.1137/120871985).
+## Building
+
+<<<<<<< HEAD
+Hydrogen builds with a [CMake](https://cmake.org) (version 3.9.0 or
+newer) build system. The build system respects the "normal" CMake
+variables (`CMAKE_CXX_COMPILER`, `CMAKE_INSTALL_PREFIX`,
+`CMAKE_BUILD_TYPE`, etc) in addition to the [Hydrogen-specific options
+documented below](#hydrogen-cmake-options).
+=======
+### Deprecation notice
+Elemental has not been maintained since 2016. But the project was [forked by Lawrence Livermore National Lab](https://github.com/LLNL/Elemental). The author stopped being interested in volunteering to develop MPI codes and no one has stepped up after three years.
+
+**Software consists of teams of people. If you want people to continue developing a project after it ceases to be their personal interest, fund them for it.**
+
+The developer is now volunteering time towards high-performance math software for workstations at [hodgestar.com](https://hodgestar.com).
 
 ### Deprecation notice
 Elemental has not been maintained since 2016. But the project was [forked by Lawrence Livermore National Lab](https://github.com/LLNL/Elemental). The author stopped being interested in volunteering to develop MPI codes and no one has stepped up after three years.
@@ -121,106 +137,169 @@ distributed under the terms of the [GNU Lesser General Public License, version 2
 while,
 [QD](http://crd-legacy.lbl.gov/~dhbailey/mpdist/) is distributed under the
 terms of the [LBNL-BSD-License](http://crd.lbl.gov/~dhbailey/mpdist/LBNL-BSD-License.doc).
+>>>>>>> 6eb15a0da (Update README.md)
 
 ### Dependencies
 
-**Intranodal linear algebra**
+The most basic build of Hydrogen requires only:
 
-* [BLAS](http://netlib.org/blas)
-* [LAPACK](http://netlib.org/lapack)
-* [libflame](http://www.cs.utexas.edu/~flame/web/libFLAME.html) (optional for faster bidiagonal SVDs)
-* Elemental is packed with a greatly modified version of the Alternating
-  Minimum Degree (AMD) reordering and unblocked sparse LDL factorization from
-  [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) (**Note:** The used portions of SuiteSparse are licensed under the [GNU Lesser General Public License, version 2.1 or later](http://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html))
++ [CMake](https://cmake.org): Version 3.9.0 or newer.
 
-[OpenBLAS](http://www.openblas.net) is automatically downloaded and installed
-if no vendor/tuned BLAS/LAPACK is detected.
++ A C++11-compliant compiler.
 
-**Intranodal graph partitioning**
++ MPI 3.0-compliant MPI library.
 
-* [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview)
-* [ParMETIS](http://glaros.dtc.umn.edu/gkhome/metis/parmetis/overview) (**Note:** commercial users must disable this option during configuration)
++ [BLAS](http://www.netlib.org/blas/): Provides basic linear
+  algebra kernels for the CPU code path.
 
-If ParMETIS is not disabled and cannot be found (including access to internal APIs), then it is automatically downloaded and installed;
-otherwise, if METIS support is not detected, METIS is downloaded and installed.
++ [LAPACK](http://www.netlib.org/lapack/): Provides a few utility
+  functions (norms and 2D copies, e.g.). This could be demoted to
+  "optional" status with little effort.
+  
+Optional dependencies of Hydrogen include:
 
-**Internodal linear algebra**
++ [Aluminum](https://github.com/llnl/aluminum): Provides asynchronous
+  blocking and non-blocking communication routines with an MPI-like
+  syntax. The use of Aluminum is **highly** recommended.
 
-* [Parallel MRRR](https://code.google.com/p/pmrrr/) (packaged with Elemental)
-* [ScaLAPACK](http://netlib.org/scalapack) (optional for benchmarking)
++ [CUDA](https://developer.nvidia.com/cuda-zone): Version 9.2 or
+  newer. Hydrogen primarily uses the runtime API and also grabs some
+  features of NVML and NVPROF (if enabled).
 
-If [ScaLAPACK](http://www.netlib.org/scalapack) support is not explicitly 
-disabled, then Elemental looks for a previous installation and, failing that,
-attempts to automatically download and install the library.
++ [CUB](https://github.com/nvlabs/cub): Version 1.8.0 is
+  recommended. This will become required for CUDA-enabled builds in
+  the very near future.
 
-**Internodal communication**
++ [Half](https://half.sourceforge.net): Provides support for IEEE-754
+  16-bit precision support. (*Note*: This is work in progress.)
 
-* MPI2 (typically [MPICH](http://www.mpich.org/), [MVAPICH](http://mvapich.cse.ohio-state.edu/), or [OpenMPI](http://www.open-mpi.org/))
++ [OpenMP](https://www.openmp.org): OpenMP 3.0 is probably sufficient
+  for the limited use of the features in Hydrogen.
 
-**Auxiliary libraries**
++ [VTune](https://software.intel.com/en-us/vtune): Proprietary
+  profiler from Intel. May provide more detailed annotations to
+  profiles of Hydrogen CPU code.
 
-* [QD](http://crd-legacy.lbl.gov/~dhbailey/mpdist/) for efficient software analogues of 128-bit and 256-bit floating-point arithmetic (**Note:** QD is licensed under the [LBNL-BSD-License](http://crd.lbl.gov/~dhbailey/mpdist/LBNL-BSD-License.doc), which is a slight modification of the BSD License)
+### Hydrogen CMake options
 
-* [libquadmath](https://gcc.gnu.org/onlinedocs/libquadmath/) for quad-precision support (especially for iterative refinement). (**Note:** libquadmath is licensed under the [GNU Lesser General Public License, version 2.1 or later](http://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html))
+Some of the options are inherited from Elemental with `EL_` replaced
+by `Hydrogen_`. Others are unique to Hydrogen. Supported options are:
 
-* [MPFR](http://www.mpfr.org/) for arbitrary-precision real arithmetic. (**Note:** MPFR is licensed under the [GNU Lesser General Public License, v3 or later](http://www.gnu.org/copyleft/lesser.html))
++ `Hydrogen_AVOID_CUDA_AWARE_MPI` (Default: `OFF`): There is a very
+  small amount of logic to try to detect CUDA-aware MPI (it should not
+  give a false-positive but is likey to give a false negative). This
+  option causes the library to ignore this and assume the MPI library
+  is not CUDA-aware.
 
-* [MPC](http://www.multiprecision.org/index.php?prog=mpc) for arbitrary-precision complex arithmetic. (**Note:** MPC is licensed under the [GNU Lesser General Public License, v3 or later](http://www.gnu.org/copyleft/lesser.html))
++ `Hydrogen_ENABLE_ALUMINUM` (Default: `OFF`): Enable the
+  [Aluminum](https://github.com/llnl/aluminum) library for
+  asynchronous device-aware communication. The use of this library is
+  **highly** recommended for CUDA-enabled builds.
 
-**Python interface**
++ `Hydrogen_ENABLE_CUDA` (Default: `OFF`): Enable CUDA support in the
+  library. This enables the device type `El::Device::GPU` and allows
+  memory to reside on CUDA-aware GPGPUs.
 
-* [matplotlib](http://matplotlib.org/) (optional for Python matrix visualization)
-* [NetworkX](https://networkx.github.io/) (optional for Python graph visualization)
-* [NumPy](http://www.numpy.org/)
++ `Hydrogen_ENABLE_CUB` (Default: `Hydrogen_ENABLE_CUDA`): Only
+  available if CUDA is enabled. This enables device memory management
+  through a memory pool using [CUB](https://github.com/nvlabs/cub).
 
-**C++ visualization**
++ `Hydrogen_ENABLE_HALF` (Default: `OFF`): Enable IEEE-754 "binary16"
+  16-bit precision floating point support through the [Half
+  library](https://half.sourceforge.net).
 
-* [Qt5](http://qt-project.org/qt5) (optional for visualization from C++)
++ `Hydrogen_ENABLE_BFLOAT16` (Default: `OFF`): This option is a
+  placeholder. This will enable support for "bfloat16" 16-bit
+  precision floating point arithmetic if/when that becomes a thing.
 
-**Build system**
++ `Hydrogen_USE_64BIT_INTS` (Default: `OFF`): Use `long` as the
+  default signed integer type within Hydrogen.
 
-* [CMake >= 2.8.12](http://www.cmake.org/)
++ `Hydrogen_USE_64BIT_BLAS_INTS` (Default: `OFF`): Use `long` as the
+  default signed integer type for interacting with BLAS libraries.
 
-### Third-party interfaces
++ `Hydrogen_ENABLE_TESTING` (Default: `ON`): Build the test suite.
 
-In addition to the C++11, C, and Python interfaces included within the project,
-three external interfaces are currently being externally developed:
++ `Hydrogen_ZERO_INIT` (Default: `OFF`): Initialize buffers to zero by
+  default. There will obviously be a compute-time overhead.
 
-* [R-El](https://github.com/rocanale/R-Elemental) is an [R](http://www.r-project.org) interface to Elemental developed by [Rodrigo Canales](https://github.com/rocanale) and [Paolo Bientinesi](http://hpac.rwth-aachen.de/~pauldj/)
++ `Hydrogen_ENABLE_NVPROF` (Default: `OFF`): Enable library
+  annotations using the `nvtx` interface in CUDA.
 
-* [Elemental.jl](https://github.com/JuliaParallel/Elemental.jl) is an (in-progress) [Julia](http://julialang.org) interface to Elemental being developed by [Jake Bolewski](https://github.com/jakebolewski), [Jiahao Chen](https://jiahao.github.io), and [Andreas Noack](http://andreasnoack.github.io/academiccv.html).
++ `Hydrogen_ENABLE_VTUNE` (Default: `OFF`): Enable library annotations
+  for use with Intel's VTune performance profiler.
 
-* [CVXPY](https://github.com/cvxgrp/cvxpy) is a Python-embedded modeling language for convex optimization problems with an (in-progress) interface to Elemental's distributed Interior Point Methods. This effort is being led by [Steven Diamond](http://web.stanford.edu/~stevend2/).
++ `Hydrogen_ENABLE_SYNCHRONOUS_PROFILING` (Default: `OFF`):
+  Synchronize computation at the beginning of profiling regions.
 
-### Related open-source projects
++ `Hydrogen_ENABLE_OPENMP` (Default: `OFF`): Enable OpenMP on-node
+  parallelization primatives. OpenMP is used for CPU parallelization
+  only; the device offload features of modern OpenMP are not used.
 
-**Distributed dense linear algebra**:
++ `Hydrogen_ENABLE_OMP_TASKLOOP` (Default: `OFF`): Use `omp taskloop`
+  instead of `omp parallel for`. This is a highly experimental
+  feature. Use with caution.
 
-* [ELPA](http://elpa.rzg.mpg.de)
-* [CANDMC](https://github.com/solomonik/CANDMC)
-* [PaRSEC/DPLASMA](http://icl.eecs.utk.edu/projectsdev/parsec/index.html)
-* [PLAPACK](http://www.cs.utexas.edu/~plapack)
-* [ScaLAPACK](http://www.netlib.org/scalapack)
+The following options are legacy options inherited from Elemental. The
+related functionality is not tested regularly. The likely implication
+of this statement is that nothing specific to this option has been
+removed from what remains of Elemental but also that nothing specific
+to these options has been added to any of the new features of
+Hydrogen.
 
-**Distributed sparse-direct linear algebra**:
++ `Hydrogen_ENABLE_VALGRIND` (Default: `OFF`): Search for `valgrind`
+  and enable related features if found.
 
-* [DSCPACK](http://www.cse.psu.edu/~raghavan/Dscpack/)
-* [MUMPS](http://mumps.enseeiht.fr/)
-* [SuperLU](http://crd-legacy.lbl.gov/~xiaoye/SuperLU/)
++ `Hydrogen_ENABLE_QUADMATH` (Default: `OFF`): Search for the `quadmath`
+  library and enable related features if found. This is for
+  extended-precision computations.
 
-**Distributed linear algebra Frameworks**
++ `Hydrogen_ENABLE_QD` (Default: `OFF`): Search for the `QD` library
+  and enable related features if found. This is for extended-precision
+  computations.
 
-* [PETSc](https://www.mcs.anl.gov/petsc/)
-* [Trilinos](http://trilinos.sandia.gov)
++ `Hydrogen_ENABLE_MPC` (Default: `OFF`): Search for the GNU MPC
+  library (requires MPFR and GMP as well) and enable related features
+  if found. This is for extended precision.
 
-**Convex optimization**
++ `Hydrogen_USE_CUSTOM_ALLTOALLV` (Default: `OFF`): Avoid
+  MPI_Alltoallv for performance reasons.
 
-* [CVXOPT](http://cvxopt.org/)
-* [ECOS](https://github.com/embotech/ecos)
-* [L1-MAGIC](http://users.ece.gatech.edu/~justin/l1magic/)
-* [SDPA](http://sdpa.sourceforge.net/index.html)
++ `Hydrogen_AVOID_COMPLEX_MPI` (Default: `OFF`): Avoid potentially
+  buggy complex MPI routines.
 
-**Lattice reduction and number theory**
++ `Hydrogen_USE_BYTE_ALLGATHERS` (Default: `OFF`): Avoid BG/P
+  allgather performance bug.
 
-* [FPLLL](https://github.com/dstehle/fplll)
-* [NTL](http://www.shoup.net/ntl/)
++ `Hydrogen_CACHE_WARNINGS` (Default: `OFF`): Warns when using
+  cache-unfriendly routines.
+
++ `Hydrogen_UNALIGNED_WARNINGS` (Default: `OFF`): Warn when performing
+  unaligned redistributions.
+
++ `Hydrogen_VECTOR_WARNINGS` (Default: `OFF`): Warn when vector
+  redistribution chances are missed.
+
+### Example CMake invocation
+
+The following builds a CUDA-enabled, CUB-enabled, Aluminum-enabled
+version of Hydrogen:
+
+```bash
+    cmake -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_INSTALL_PREFIX=/path/to/my/install \
+        -DHydrogen_ENABLE_CUDA=ON \
+        -DHydrogen_ENABLE_CUB=ON \
+        -DHydrogen_ENABLE_ALUMINUM=ON \
+        -DCUB_DIR=/path/to/cub \
+        -DAluminum_DIR=/path/to/aluminum \
+        /path/to/hydrogen
+    ninja install
+```
+
+## Reporting issues
+
+Issues should be reported [on
+Github](https://github.com/llnl/elemental/issues/new).

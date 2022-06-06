@@ -12,10 +12,12 @@
 namespace El {
 namespace copy {
 
-template<typename T,Dist U,Dist V>
+// FIXME (trb 04/03/2018): This would not be hard to extend to
+// inter-device AllGather
+template<typename T,Dist U,Dist V,Device D>
 void AllGather
-( const DistMatrix<T,        U,           V   >& A,
-        DistMatrix<T,Collect<U>(),Collect<V>()>& B )
+( DistMatrix<T,        U,           V   ,ELEMENT,D> const& A,
+  DistMatrix<T,Collect<U>(),Collect<V>(),ELEMENT,D>& B )
 {
     EL_DEBUG_CSE
     AssertSameGrids( A, B );
@@ -24,6 +26,10 @@ void AllGather
     const Int width = A.Width();
     B.SetGrid( A.Grid() );
     B.Resize( height, width );
+
+    SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix()), syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
+
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
 
     if( A.Participating() )
     {
@@ -39,31 +45,38 @@ void AllGather
             const Int maxLocalHeight = MaxLength(height,colStride);
             const Int maxLocalWidth = MaxLength(width,rowStride);
             const Int portionSize = mpi::Pad( maxLocalHeight*maxLocalWidth );
-            vector<T> buf;
-            FastResize( buf, (distStride+1)*portionSize );
-            T* sendBuf = &buf[0];
-            T* recvBuf = &buf[portionSize];
+            simple_buffer<T,D> buf((distStride+1)*portionSize, syncInfoB);
+            T* sendBuf = buf.data();
+            T* recvBuf = buf.data() + portionSize;
 
+#if 0
+            simple_buffer<T,D1> send_buffer(portionSize);
+            simple_buffer<T,D2> recv_buffer(distStride*portionSize);
+            T* sendBuf = send_buffer.data();
+            T* recvBuf = recv_buffer.data();
+#endif
             // Pack
-            util::InterleaveMatrix
-            ( A.LocalHeight(), A.LocalWidth(),
-              A.LockedBuffer(), 1, A.LDim(),
-              sendBuf,          1, A.LocalHeight() );
+            util::InterleaveMatrix(
+                A.LocalHeight(), A.LocalWidth(),
+                A.LockedBuffer(), 1, A.LDim(),
+                sendBuf,          1, A.LocalHeight(),
+                syncInfoB);
 
             // Communicate
-            mpi::AllGather
-            ( sendBuf, portionSize, recvBuf, portionSize, A.DistComm() );
+            mpi::AllGather(
+                sendBuf, portionSize, recvBuf, portionSize, A.DistComm(),
+                syncInfoB);
 
             // Unpack
-            util::StridedUnpack
-            ( height, width,
-              A.ColAlign(), colStride,
-              A.RowAlign(), rowStride,
-              recvBuf, portionSize,
-              B.Buffer(), B.LDim() );
+            util::StridedUnpack(
+                height, width,
+                A.ColAlign(), colStride,
+                A.RowAlign(), rowStride,
+                recvBuf, portionSize,
+                B.Buffer(), B.LDim(), syncInfoB);
         }
     }
-    if( A.Grid().InGrid() && A.CrossComm() != mpi::COMM_SELF )
+    if (A.Grid().InGrid() && (!CongruentToCommSelf(A.CrossComm())))
         El::Broadcast( B, A.CrossComm(), A.Root() );
 }
 

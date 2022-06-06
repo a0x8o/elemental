@@ -46,6 +46,24 @@ void IndexDependentMap( Matrix<T>& A, function<T(Int,Int,const T&)> func )
 }
 
 template<typename T>
+void IndexDependentMap( AbstractMatrix<T>& A, function<T(Int,Int,const T&)> func )
+{
+    switch(A.GetDevice()) {
+    case Device::CPU:
+      IndexDependentMap(static_cast<Matrix<T,Device::CPU>&>(A), func);
+      break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+      LogicError("IndexDependentMap: Unsupported device type.");
+      // IndexDependentMap(static_cast<Matrix<T,Device::GPU>&>(A), func);
+      break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+      LogicError("IndexDependentMap: Unsupported device type.");
+    }
+}
+
+template<typename T>
 void IndexDependentMap
 ( AbstractDistMatrix<T>& A, function<T(Int,Int,const T&)> func )
 {
@@ -92,7 +110,7 @@ void IndexDependentMap
     const Int m = A.Height();
     const Int n = A.Width();
     B.Resize( m, n );
-    const T* ABuf = A.LockedBuffer();
+    const S* ABuf = A.LockedBuffer();
     T* BBuf = B.Buffer();
     const Int ALDim = A.LDim();
     const Int BLDim = B.LDim();
@@ -133,7 +151,7 @@ void IndexDependentMap
     const Int nLoc = A.LocalWidth();
     B.AlignWith( A.DistData() );
     B.Resize( A.Height(), A.Width() );
-    const T* ALocBuf = A.LockedBuffer();
+    const S* ALocBuf = A.LockedBuffer();
     T* BLocBuf = B.Buffer();
     const Int ALocLDim = A.LDim();
     const Int BLocLDim = B.LDim();
@@ -254,6 +272,9 @@ void IndexDependentMap
 #define PROTO(T) \
   EL_EXTERN template void IndexDependentMap \
   ( Matrix<T>& A, \
+    function<T(Int,Int,const T&)> func ); \
+  EL_EXTERN template void IndexDependentMap \
+  ( AbstractMatrix<T>& A, \
     function<T(Int,Int,const T&)> func ); \
   EL_EXTERN template void IndexDependentMap \
   ( AbstractDistMatrix<T>& A, \

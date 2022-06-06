@@ -22,8 +22,11 @@ template<typename T> Int LocalTrr2kBlocksize();
 namespace GemmAlgorithmNS {
 enum GemmAlgorithm {
   GEMM_DEFAULT,
+  GEMM_SUMMA_A_MS,
   GEMM_SUMMA_A,
+  GEMM_SUMMA_B_MS,
   GEMM_SUMMA_B,
+  GEMM_SUMMA_C_MS,
   GEMM_SUMMA_C,
   GEMM_SUMMA_DOT,
   GEMM_CANNON
@@ -34,12 +37,32 @@ using namespace GemmAlgorithmNS;
 template<typename T>
 void Gemm
 ( Orientation orientA, Orientation orientB,
-  T alpha, const Matrix<T>& A, const Matrix<T>& B, T beta, Matrix<T>& C );
+  T alpha, const AbstractMatrix<T>& A, const AbstractMatrix<T>& B,
+  T beta, AbstractMatrix<T>& C );
 
 template<typename T>
 void Gemm
 ( Orientation orientA, Orientation orientB,
-  T alpha, const Matrix<T>& A, const Matrix<T>& B, Matrix<T>& C );
+  T alpha, const AbstractMatrix<T>& A, const AbstractMatrix<T>& B,
+  AbstractMatrix<T>& C );
+
+template <typename T, Device D, typename=EnableIf<IsDeviceValidType<T,D>>>
+void Gemm
+( Orientation orientA, Orientation orientB,
+  T alpha, const Matrix<T,D>& A, const Matrix<T,D>& B,
+  T beta, Matrix<T,D>& C );
+
+template <typename T, Device D,
+          typename=DisableIf<IsDeviceValidType<T,D>>, typename=void>
+void Gemm
+( Orientation orientA, Orientation orientB,
+  T alpha, const Matrix<T,D>& A, const Matrix<T,D>& B,
+  T beta, Matrix<T,D>& C );
+
+template <typename T, Device D>
+void Gemm
+( Orientation orientA, Orientation orientB,
+  T alpha, const Matrix<T,D>& A, const Matrix<T,D>& B, Matrix<T,D>& C );
 
 template<typename T>
 void Gemm
@@ -82,45 +105,26 @@ void Hemm
 // Herk
 // ====
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const Matrix<T>& A, Base<T> beta, Matrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractMatrix<T>& A,
+    Base<T> beta, AbstractMatrix<T>& C);
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const Matrix<T>& A, Matrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractMatrix<T>& A,
+    AbstractMatrix<T>& C);
 
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const AbstractDistMatrix<T>& A,
-  Base<T> beta,        AbstractDistMatrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractDistMatrix<T>& A,
+    Base<T> beta,        AbstractDistMatrix<T>& C);
 template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& C );
-
-template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const SparseMatrix<T>& A,
-  Base<T> beta,        SparseMatrix<T>& C );
-template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const SparseMatrix<T>& A,
-                       SparseMatrix<T>& C );
-
-template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const DistSparseMatrix<T>& A,
-  Base<T> beta,        DistSparseMatrix<T>& C );
-template<typename T>
-void Herk
-( UpperOrLower uplo, Orientation orientation,
-  Base<T> alpha, const DistSparseMatrix<T>& A,
-                       DistSparseMatrix<T>& C );
+void Herk(
+    UpperOrLower uplo, Orientation orientation,
+    Base<T> alpha, const AbstractDistMatrix<T>& A,
+    AbstractDistMatrix<T>& C);
 
 // Her2k
 // =====
@@ -146,41 +150,6 @@ void Her2k
 ( UpperOrLower uplo, Orientation orientation,
   T alpha, const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& B,
                  AbstractDistMatrix<T>& C );
-
-// Multiply
-// ========
-// NOTE: The following routine multiplies a sparse matrix by a set of vectors
-//       and is obviously not a BLAS routine. However, it is a basic linear
-//       algebra routine making use of Elemental's core data structures, and
-//       so this is the natural placement
-template<typename T>
-void Multiply
-( Orientation orientation,
-  T alpha, const SparseMatrix<T>& A, const Matrix<T>& X,
-  T beta,                                  Matrix<T>& Y );
-
-template<typename T>
-void Multiply
-( Orientation orientation,
-  T alpha, const Graph& A, const Matrix<T>& X,
-  T beta,                        Matrix<T>& Y );
-
-template<typename T>
-void Multiply
-( Orientation orientation,
-  T alpha,
-  const DistSparseMatrix<T>& A,
-  const DistMultiVec<T>& X,
-  T beta,
-        DistMultiVec<T>& Y );
-template<typename T>
-void Multiply
-( Orientation orientation,
-  T alpha,
-  const DistSparseMatrix<T>& A,
-  const AbstractDistMatrix<T>& X,
-  T beta,
-        AbstractDistMatrix<T>& Y );
 
 // MultiShiftQuasiTrsm
 // ===================
@@ -325,12 +294,14 @@ void LocalAccumulateRU
 template<typename T>
 void Syrk
 ( UpperOrLower uplo, Orientation orientation,
-  T alpha, const Matrix<T>& A, T beta, Matrix<T>& C,
+  T alpha, const AbstractMatrix<T>& A,
+  T beta, AbstractMatrix<T>& C,
   bool conjugate=false );
 template<typename T>
 void Syrk
 ( UpperOrLower uplo, Orientation orientation,
-  T alpha, const Matrix<T>& A, Matrix<T>& C,
+  T alpha, const AbstractMatrix<T>& A,
+  AbstractMatrix<T>& C,
   bool conjugate=false );
 
 template<typename T>
@@ -343,28 +314,6 @@ void Syrk
 ( UpperOrLower uplo, Orientation orientation,
   T alpha, const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& C,
   bool conjugate=false );
-
-template<typename T>
-void Syrk
-( UpperOrLower uplo, Orientation orientation,
-  T alpha, const SparseMatrix<T>& A,
-  T beta,        SparseMatrix<T>& C, bool conjugate=false );
-template<typename T>
-void Syrk
-( UpperOrLower uplo, Orientation orientation,
-  T alpha, const SparseMatrix<T>& A,
-                 SparseMatrix<T>& C, bool conjugate=false );
-
-template<typename T>
-void Syrk
-( UpperOrLower uplo, Orientation orientation,
-  T alpha, const DistSparseMatrix<T>& A,
-  T beta,        DistSparseMatrix<T>& C, bool conjugate=false );
-template<typename T>
-void Syrk
-( UpperOrLower uplo, Orientation orientation,
-  T alpha, const DistSparseMatrix<T>& A,
-                 DistSparseMatrix<T>& C, bool conjugate=false );
 
 // Syr2k
 // =====
@@ -453,26 +402,27 @@ enum TrsmAlgorithm {
 using namespace TrsmAlgorithmNS;
 
 template<typename F>
-void Trsm
-( LeftOrRight side, UpperOrLower uplo,
-  Orientation orientation, UnitOrNonUnit diag,
-  F alpha, const Matrix<F>& A, Matrix<F>& B,
-  bool checkIfSingular=false );
+void Trsm(
+    LeftOrRight side, UpperOrLower uplo,
+    Orientation orientation, UnitOrNonUnit diag,
+    F alpha, AbstractMatrix<F> const& A, AbstractMatrix<F>& B,
+    bool checkIfSingular=false);
 template<typename F>
-void Trsm
-( LeftOrRight side, UpperOrLower uplo,
-  Orientation orientation, UnitOrNonUnit diag,
-  F alpha,
-  const AbstractDistMatrix<F>& A,
-        AbstractDistMatrix<F>& B,
-  bool checkIfSingular=false, TrsmAlgorithm alg=TRSM_DEFAULT );
+void Trsm(
+    LeftOrRight side, UpperOrLower uplo,
+    Orientation orientation, UnitOrNonUnit diag,
+    F alpha,
+    AbstractDistMatrix<F> const& A,
+    AbstractDistMatrix<F>& B,
+    bool checkIfSingular=false,
+    TrsmAlgorithm alg=TRSM_DEFAULT);
 
-template<typename F>
+template<typename F, Device D>
 void LocalTrsm
 ( LeftOrRight side, UpperOrLower uplo,
   Orientation orientation, UnitOrNonUnit diag,
   F alpha,
-  const DistMatrix<F,STAR,STAR>& A,
+  const DistMatrix<F,STAR,STAR,ELEMENT,D>& A,
         AbstractDistMatrix<F>& X,
   bool checkIfSingular=false );
 
@@ -573,13 +523,15 @@ void LocalTrrk
   T alpha, const DistMatrix<T,MC,STAR>& A,
            const DistMatrix<T,MR,STAR>& B,
   T beta,        DistMatrix<T>& C );
-template<typename T>
+template<typename T,Device D>
 void LocalTrrk
 ( UpperOrLower uplo,
   Orientation orientA,
-  T alpha, const DistMatrix<T,STAR,MC>& A,
-           const DistMatrix<T,STAR,MR>& B,
-  T beta,        DistMatrix<T,MC,  MR>& C );
+  T alpha,
+  DistMatrix<T,STAR,MC,ELEMENT,D>const & A,
+  DistMatrix<T,STAR,MR,ELEMENT,D> const& B,
+  T beta,
+  DistMatrix<T,MC,  MR,ELEMENT,D>& C );
 template<typename T>
 void LocalTrrk
 ( UpperOrLower uplo,

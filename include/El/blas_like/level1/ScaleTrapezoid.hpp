@@ -15,7 +15,7 @@ template<typename T,typename S>
 void ScaleTrapezoid( S alphaS, UpperOrLower uplo, Matrix<T>& A, Int offset )
 {
     EL_DEBUG_CSE
-    if( alphaS == S(1) )
+    if( alphaS == To<S>(1) )
         return;
     const Int height = A.Height();
     const Int width = A.Width();
@@ -49,7 +49,7 @@ ScaleTrapezoid
 ( S alphaS, UpperOrLower uplo, AbstractDistMatrix<T>& A, Int offset )
 {
     EL_DEBUG_CSE
-    if( alphaS == S(1) )
+    if( alphaS == To<S>(1) )
         return;
     const Int height = A.Height();
     const Int localHeight = A.LocalHeight();
@@ -84,46 +84,6 @@ ScaleTrapezoid
             for( Int iLoc=0; iLoc<(localHeight-numZeroRows); ++iLoc )
                 col[iLoc] *= alpha;
         }
-    }
-}
-
-template<typename T,typename S>
-void
-ScaleTrapezoid( S alpha, UpperOrLower uplo, SparseMatrix<T>& A, Int offset )
-{
-    EL_DEBUG_CSE
-    if( alpha == S(1) )
-        return;
-    const Int numEntries = A.NumEntries();
-    const Int* sBuf = A.LockedSourceBuffer();
-    const Int *tBuf = A.LockedTargetBuffer();
-    T* vBuf = A.ValueBuffer();
-    for( Int k=0; k<numEntries; ++k )
-    {
-        const Int i = sBuf[k];
-        const Int j = tBuf[k];
-        if( (uplo==LOWER && j-i <= offset) || (uplo==UPPER && j-i >= offset) )
-            vBuf[k] *= alpha;
-    }
-}
-
-template<typename T,typename S>
-void
-ScaleTrapezoid( S alpha, UpperOrLower uplo, DistSparseMatrix<T>& A, Int offset )
-{
-    EL_DEBUG_CSE
-    if( alpha == S(1) )
-        return;
-    const Int numLocalEntries = A.NumLocalEntries();
-    const Int* sBuf = A.LockedSourceBuffer();
-    const Int *tBuf = A.LockedTargetBuffer();
-    T* vBuf = A.ValueBuffer();
-    for( Int k=0; k<numLocalEntries; ++k )
-    {
-        const Int i = sBuf[k];
-        const Int j = tBuf[k];
-        if( (uplo==LOWER && j-i <= offset) || (uplo==UPPER && j-i >= offset) )
-            vBuf[k] *= alpha;
     }
 }
 

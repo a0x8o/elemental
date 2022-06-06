@@ -33,7 +33,7 @@ template void Scal
 ( BlasInt n,
   const Int& alpha,
   Int* x, BlasInt incx );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template void Scal
 ( BlasInt n,
   const DoubleDouble& alpha,
@@ -51,7 +51,7 @@ template void Scal
   const Complex<QuadDouble>& alpha,
   Complex<QuadDouble>* x, BlasInt incx );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template void Scal
 ( BlasInt n,
   const Quad& alpha,
@@ -61,7 +61,13 @@ template void Scal
   const Complex<Quad>& alpha,
   Complex<Quad>* x, BlasInt incx );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_HALF
+template void Scal
+( BlasInt n,
+  const cpu_half_type& alpha,
+  cpu_half_type* x, BlasInt incx );
+#endif
+#ifdef HYDROGEN_HAVE_MPC
 template void Scal
 ( BlasInt n,
   const BigInt& alpha,
@@ -90,7 +96,7 @@ template void Scal
 ( BlasInt n,
   const double& alpha,
   Complex<double>* x, BlasInt incx );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template void Scal
 ( BlasInt n,
   const DoubleDouble& alpha,
@@ -100,13 +106,13 @@ template void Scal
   const QuadDouble& alpha,
   Complex<QuadDouble>* x, BlasInt incx );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template void Scal
 ( BlasInt n,
   const Quad& alpha,
   Complex<Quad>* x, BlasInt incx );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template void Scal
 ( BlasInt n,
   const BigFloat& alpha,

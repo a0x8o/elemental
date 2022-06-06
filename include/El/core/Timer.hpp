@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_TIMER_HPP
@@ -16,11 +16,9 @@ namespace El {
 using std::chrono::duration;
 using std::chrono::duration_cast;
 
-#ifdef EL_HAVE_STEADYCLOCK
-typedef std::chrono::steady_clock Clock;
-#else
-typedef std::chrono::high_resolution_clock Clock;
-#endif
+using Clock = std::conditional<std::chrono::high_resolution_clock::is_steady,
+                               std::chrono::high_resolution_clock,
+                               std::chrono::steady_clock>::type;
 
 class Timer
 {

@@ -66,7 +66,7 @@ class Args : public choice::MpiArgs
 public:
     Args
     ( int argc, char** argv,
-      mpi::Comm comm=mpi::COMM_WORLD, ostream& error=cerr )
+      mpi::Comm const& comm, ostream& error )
     : choice::MpiArgs(argc,argv,comm,error)
     { }
     virtual ~Args() { }
@@ -238,30 +238,30 @@ public:
     : std::runtime_error( msg ) { }
 };
 
-EL_DEBUG_ONLY(
-    void EnableTracing();
-    void DisableTracing();
+#ifndef EL_RELEASE
+void EnableTracing();
+void DisableTracing();
 
-    void PushCallStack( string s );
-    void PopCallStack();
-    void DumpCallStack( ostream& os=cerr );
+void PushCallStack( string s );
+void PopCallStack();
+void DumpCallStack( ostream& os=cerr );
 
-    class CallStackEntry
+class CallStackEntry
+{
+public:
+    CallStackEntry( string s )
     {
-    public:
-        CallStackEntry( string s )
-        {
-            if( !uncaught_exception() )
-                PushCallStack(s);
-        }
-        ~CallStackEntry()
-        {
-            if( !uncaught_exception() )
-                PopCallStack();
-        }
-    };
-    typedef CallStackEntry CSE;
-)
+        if( !uncaught_exception() )
+            PushCallStack(s);
+    }
+    ~CallStackEntry()
+    {
+        if( !uncaught_exception() )
+            PopCallStack();
+    }
+};
+typedef CallStackEntry CSE;
+#endif // !EL_RELEASE
 
 void OpenLog( const char* filename );
 
@@ -287,10 +287,10 @@ template<typename... ArgPack>
 void Output( const ArgPack& ... args );
 
 template<typename... ArgPack>
-void OutputFromRoot( mpi::Comm comm, const ArgPack& ... args );
+void OutputFromRoot( mpi::Comm const& comm, const ArgPack& ... args );
 
 template<typename T>
-void EnsureConsistent( T alpha, mpi::Comm comm, string name="" );
+void EnsureConsistent( T alpha, mpi::Comm const& comm, string name="" );
 
 // This will be guaranteed by C++14 via std::make_unique
 template<typename T,typename ...ArgPack>

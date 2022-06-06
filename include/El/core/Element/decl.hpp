@@ -25,6 +25,7 @@ std::string TypeName()
 
 template<> std::string TypeName<bool>();
 template<> std::string TypeName<char>();
+template<> std::string TypeName<unsigned char>();
 template<> std::string TypeName<char*>();
 template<> std::string TypeName<const char*>();
 template<> std::string TypeName<std::string>();
@@ -36,14 +37,20 @@ template<> std::string TypeName<long int>();
 template<> std::string TypeName<long long int>();
 template<> std::string TypeName<float>();
 template<> std::string TypeName<double>();
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_HALF
+template<> std::string TypeName<cpu_half_type>();
+#endif
+#ifdef HYDROGEN_GPU_USE_FP16
+template <> std::string TypeName<gpu_half_type>();
+#endif
+#ifdef HYDROGEN_HAVE_QD
 template<> std::string TypeName<DoubleDouble>();
 template<> std::string TypeName<QuadDouble>();
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> std::string TypeName<Quad>();
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> std::string TypeName<BigInt>();
 template<> std::string TypeName<BigFloat>();
 #endif
@@ -56,45 +63,51 @@ std::string TypeName()
 // Types that Matrix, DistMatrix, etc. are instantiatable with
 // -----------------------------------------------------------
 template<typename T> struct IsBlasScalar
-{ static const bool value=false; };
+    : std::false_type {};
 template<> struct IsBlasScalar<float>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsBlasScalar<double>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsBlasScalar<Complex<float>>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsBlasScalar<Complex<double>>
-{ static const bool value=true; };
+    : std::true_type {};
 
 template<typename T> struct IsPacked
-{ static const bool value=false; };
+    : std::false_type {};
 template<> struct IsPacked<byte>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<unsigned>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<unsigned long>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<unsigned long long>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<int>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<long int>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<long long int>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<float>
-{ static const bool value=true; };
+    : std::true_type {};
 template<> struct IsPacked<double>
-{ static const bool value=true; };
-#ifdef EL_HAVE_QD
-template<> struct IsPacked<DoubleDouble>
-{ static const bool value=true; };
-template<> struct IsPacked<QuadDouble>
-{ static const bool value=true; };
+    : std::true_type {};
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsPacked<cpu_half_type> : std::true_type {};
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_GPU_USE_FP16
+template <> struct IsPacked<gpu_half_type> : std::true_type {};
+#endif
+#ifdef HYDROGEN_HAVE_QD
+template<> struct IsPacked<DoubleDouble>
+    : std::true_type {};
+template<> struct IsPacked<QuadDouble>
+    : std::true_type {};
+#endif
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> struct IsPacked<Quad>
-{ static const bool value=true; };
+    : std::true_type {};
 #endif
 template<typename T> struct IsPacked<Complex<T>>
 { static const bool value=IsPacked<T>::value; };
@@ -119,30 +132,30 @@ template<typename Field> struct PromoteHelper { typedef Field type; };
 template<> struct PromoteHelper<float> { typedef double type; };
 
 // Handle the promotion of 'double'
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> struct PromoteHelper<double> { typedef DoubleDouble type; };
 #else
- #ifdef EL_HAVE_QUAD
+ #ifdef HYDROGEN_HAVE_QUADMATH
 template<> struct PromoteHelper<double> { typedef Quad type; };
- #elif defined(EL_HAVE_MPC)
+ #elif defined(HYDROGEN_HAVE_MPC)
 template<> struct PromoteHelper<double> { typedef BigFloat type; };
  #endif
 #endif
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 // Handle the promotion of 'DoubleDouble'
 template<> struct PromoteHelper<DoubleDouble> { typedef QuadDouble type; };
 // Handle the promotion of 'QuadDouble'
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> struct PromoteHelper<QuadDouble> { typedef BigFloat type; };
 #endif
 #endif
 
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 // Handle the promotion of 'Quad'
- #ifdef EL_HAVE_QD
+ #ifdef HYDROGEN_HAVE_QD
 template<> struct PromoteHelper<Quad> { typedef QuadDouble type; };
- #elif defined(EL_HAVE_MPC)
+ #elif defined(HYDROGEN_HAVE_MPC)
 template<> struct PromoteHelper<Quad> { typedef BigFloat type; };
  #endif
 #endif
@@ -172,29 +185,35 @@ struct CanBidirectionalCast
 // (which is different than Int if 64-bit integers are enabled)
 // ------------------------------------------------------------
 // TODO(poulson): Reuse IsScalar
-template<typename T> struct IsData { static const bool value=false; };
-template<typename T> struct IsData<T*> { static const bool value=true; };
-template<typename T> struct IsData<const T*> { static const bool value=true; };
+template<typename T> struct IsData : std::false_type {};
+template<typename T> struct IsData<T*> : std::true_type {};
+template<typename T> struct IsData<const T*> : std::true_type {};
 #ifdef EL_USE_64BIT_INTS
-template<> struct IsData<int> { static const bool value=true; };
+template<> struct IsData<int> : std::true_type {};
 #endif
-template<> struct IsData<Unsigned> { static const bool value=true; };
-template<> struct IsData<Int> { static const bool value=true; };
-template<> struct IsData<float> { static const bool value=true; };
-template<> struct IsData<double> { static const bool value=true; };
-#ifdef EL_HAVE_QD
-template<> struct IsData<DoubleDouble> { static const bool value=true; };
-template<> struct IsData<QuadDouble> { static const bool value=true; };
+template<> struct IsData<Unsigned> : std::true_type {};
+template<> struct IsData<Int> : std::true_type {};
+template<> struct IsData<float> : std::true_type {};
+template<> struct IsData<double> : std::true_type {};
+template<> struct IsData<unsigned char> : std::true_type {};
+#ifdef HYDROGEN_HAVE_HALF
+template <> struct IsData<cpu_half_type> : std::true_type {};
 #endif
-#ifdef EL_HAVE_QUAD
-template<> struct IsData<Quad> { static const bool value=true; };
+#ifdef HYDROGEN_GPU_USE_FP16
+template <> struct IsData<gpu_half_type> : std::true_type {};
 #endif
-#ifdef EL_HAVE_MPC
-template<> struct IsData<BigInt> { static const bool value=true; };
-template<> struct IsData<BigFloat> { static const bool value=true; };
+#ifdef HYDROGEN_HAVE_QD
+template<> struct IsData<DoubleDouble> : std::true_type {};
+template<> struct IsData<QuadDouble> : std::true_type {};
 #endif
-template<typename T> struct IsData<Complex<T>>
-{ static const bool value=IsData<T>::value; };
+#ifdef HYDROGEN_HAVE_QUADMATH
+template<> struct IsData<Quad> : std::true_type {};
+#endif
+#ifdef HYDROGEN_HAVE_MPC
+template<> struct IsData<BigInt> : std::true_type {};
+template<> struct IsData<BigFloat> : std::true_type {};
+#endif
+template<typename T> struct IsData<Complex<T>> : IsData<T> {};
 
 // Basic element manipulation and I/O
 // ==================================
@@ -202,7 +221,7 @@ template<typename T> struct IsData<Complex<T>>
 // Pretty-printing
 // ---------------
 // TODO(poulson): Move into core/imports/quadmath.hpp?
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 std::ostream& operator<<( std::ostream& os, const Quad& alpha );
 std::istream& operator>>( std::istream& is,       Quad& alpha );
 #endif
@@ -240,13 +259,15 @@ void ImagPart( const Complex<Real>& alpha, Real& alphaImag ) EL_NO_EXCEPT;
 
 template<typename S,typename T,
          typename=EnableIf<CanCast<S,T>>>
-struct Caster {
+struct Caster
+{
     static T Cast( const S& alpha )
     { return T(alpha); }
 };
 
 template<typename S,typename T>
-struct Caster<S,Complex<T>,void> {
+struct Caster<S,Complex<T>,void>
+{
     static Complex<T> Cast( const S& alpha )
     { return Complex<T>( T(RealPart(alpha)), T(ImagPart(alpha)) ); }
 };
@@ -285,11 +306,11 @@ Real Conj( const Real& alpha ) EL_NO_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsStdScalar<Real>>>
 Complex<Real> Conj( const Complex<Real>& alpha ) EL_NO_EXCEPT;
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 Complex<DoubleDouble> Conj( const Complex<DoubleDouble>& alpha ) EL_NO_EXCEPT;
 Complex<QuadDouble> Conj( const Complex<QuadDouble>& alpha ) EL_NO_EXCEPT;
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 Complex<BigFloat> Conj( const Complex<BigFloat>& alpha ) EL_NO_EXCEPT;
 #endif
 
@@ -299,7 +320,7 @@ void Conj( const Real& alpha, Real& alphaConj ) EL_NO_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsStdScalar<Real>>>
 void Conj( const Complex<Real>& alpha, Complex<Real>& alphaConj ) EL_NO_EXCEPT;
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 void Conj
 ( const Complex<DoubleDouble>& alpha,
         Complex<DoubleDouble>& alphaConj ) EL_NO_EXCEPT;
@@ -307,7 +328,7 @@ void Conj
 ( const Complex<QuadDouble>& alpha,
         Complex<QuadDouble>& alphaConj ) EL_NO_EXCEPT;
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 void Conj
 ( const Complex<BigFloat>& alpha,
         Complex<BigFloat>& alphaConj ) EL_NO_EXCEPT;
@@ -318,10 +339,10 @@ void Conj
 template<typename Field,
          typename=EnableIf<IsField<Field>>>
 Base<Field> Arg( const Field& alpha );
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Arg( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigFloat Arg( const Complex<BigFloat>& alpha );
 #endif
 
@@ -331,16 +352,16 @@ template<typename Real,
          typename=EnableIf<IsReal<Real>>,
          typename=EnableIf<IsStdField<Real>>>
 Complex<Real> ComplexFromPolar( const Real& r, const Real& theta=0 );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 Complex<DoubleDouble>
 ComplexFromPolar( const DoubleDouble& r, const DoubleDouble& theta );
 Complex<QuadDouble>
 ComplexFromPolar( const QuadDouble& r, const QuadDouble& theta );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Complex<Quad> ComplexFromPolar( const Quad& r, const Quad& theta );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 Complex<BigFloat> ComplexFromPolar( const BigFloat& r, const BigFloat& theta );
 #endif
 
@@ -353,22 +374,31 @@ Complex<BigFloat> ComplexFromPolar( const BigFloat& r, const BigFloat& theta );
 template<typename T,
          typename=EnableIf<IsStdScalar<T>>>
 Base<T> Abs( const T& alpha ) EL_NO_EXCEPT;
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Abs( const DoubleDouble& alpha ) EL_NO_EXCEPT;
 QuadDouble Abs( const QuadDouble& alpha ) EL_NO_EXCEPT;
 DoubleDouble Abs( const Complex<DoubleDouble>& alpha ) EL_NO_EXCEPT;
 QuadDouble Abs( const Complex<QuadDouble>& alpha ) EL_NO_EXCEPT;
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Abs( const Quad& alpha ) EL_NO_EXCEPT;
 Quad Abs( const Complex<Quad>& alpha ) EL_NO_EXCEPT;
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_HALF
+cpu_half_type Abs( const cpu_half_type& alpha ) EL_NO_EXCEPT;
+cpu_half_type Abs( const Complex<cpu_half_type>& alpha ) EL_NO_EXCEPT;
+#endif
+#ifdef HYDROGEN_HAVE_MPC
 BigInt Abs( const BigInt& alpha ) EL_NO_EXCEPT;
 BigFloat Abs( const BigFloat& alpha ) EL_NO_EXCEPT;
 BigFloat Abs( const Complex<BigFloat>& alpha ) EL_NO_EXCEPT;
 #endif
-
+#ifdef HYDROGEN_GPU_USE_FP16
+inline gpu_half_type Abs(gpu_half_type const& x) EL_NO_EXCEPT
+{
+    return Abs(float(x));
+}
+#endif // HYDROGEN_GPU_USE_FP16
 // Carefully avoid unnecessary overflow in an absolute value computation
 // ---------------------------------------------------------------------
 template<typename Real,
@@ -424,7 +454,7 @@ Real MaxAbs( const Complex<Real>& alpha ) EL_NO_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsReal<Real>>>
 Real Sgn( const Real& alpha, bool symmetric=true ) EL_NO_EXCEPT;
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 // TODO(poulson): Continue adding BigInt support
 BigInt Sgn( const BigInt& alpha, bool symmetric=true ) EL_NO_EXCEPT;
 BigFloat Sgn( const BigFloat& alpha, bool symmetric=true ) EL_NO_EXCEPT;
@@ -451,15 +481,15 @@ template<typename Real,
          typename=DisableIf<IsStdScalar<Real>>,
          typename=void>
 Complex<Real> Exp( const Complex<Real>& alpha ) EL_NO_EXCEPT;
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Exp( const DoubleDouble& alpha ) EL_NO_EXCEPT;
 QuadDouble Exp( const QuadDouble& alpha ) EL_NO_EXCEPT;
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Exp( const Quad& alpha ) EL_NO_EXCEPT;
 Complex<Quad> Exp( const Complex<Quad>& alpha ) EL_NO_EXCEPT;
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Exp( const BigFloat& alpha ) EL_NO_EXCEPT;
 Complex<BigFloat> Exp( const Complex<BigFloat>& alpha ) EL_NO_EXCEPT;
 #endif
@@ -487,7 +517,7 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Pow( const Complex<Real>& alpha, const Real& beta );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble
 Pow( const DoubleDouble& alpha, const DoubleDouble& beta );
 DoubleDouble
@@ -497,14 +527,14 @@ Pow( const QuadDouble& alpha, const QuadDouble& beta );
 QuadDouble
 Pow( const QuadDouble& alpha, const int& beta );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Pow( const Quad& alpha, const Quad& beta );
 Quad Pow( const Quad& alpha, const Int& beta );
 Complex<Quad> Pow( const Complex<Quad>& alpha, const Complex<Quad>& beta );
 Complex<Quad> Pow( const Complex<Quad>& alpha, const Quad& beta );
 Complex<Quad> Pow( const Complex<Quad>& alpha, const Int& beta );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigInt
 Pow( const BigInt& alpha, const BigInt& beta );
 BigFloat
@@ -559,15 +589,15 @@ Field Log( const Field& alpha );
 template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Log( const Complex<Real>& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Log( const DoubleDouble& alpha );
 QuadDouble Log( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Log( const Quad& alpha );
 Complex<Quad> Log( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Log( const BigFloat& alpha );
 Complex<BigFloat> Log( const Complex<BigFloat>& alpha );
 #endif
@@ -576,7 +606,7 @@ template<typename Integer,
          typename=EnableIf<IsIntegral<Integer>>,
          typename=void>
 double Log( const Integer& alpha );
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> double Log( const BigInt& alpha );
 #endif
 
@@ -587,17 +617,17 @@ template<typename Field,
          typename=EnableIf<IsField<Field>>,
          typename=DisableIf<IsStdField<Field>>>
 Field Log2( const Field& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Log2( const DoubleDouble& alpha );
 QuadDouble Log2( const QuadDouble& alpha );
 Complex<DoubleDouble> Log2( const Complex<DoubleDouble>& alpha );
 Complex<QuadDouble> Log2( const Complex<QuadDouble>& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Log2( const Quad& alpha );
 Complex<Quad> Log2( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Log2( const BigFloat& alpha );
 Complex<BigFloat> Log2( const Complex<BigFloat>& alpha );
 #endif
@@ -607,7 +637,7 @@ template<typename Integer,
          typename=void,
          typename=void>
 double Log2( const Integer& alpha );
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> double Log2( const BigInt& alpha );
 #endif
 
@@ -618,17 +648,17 @@ template<typename Field,
          typename=EnableIf<IsField<Field>>,
          typename=DisableIf<IsStdField<Field>>>
 Field Log10( const Field& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Log10( const DoubleDouble& alpha );
 QuadDouble Log10( const QuadDouble& alpha );
 Complex<DoubleDouble> Log10( const Complex<DoubleDouble>& alpha );
 Complex<QuadDouble> Log10( const Complex<QuadDouble>& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Log10( const Quad& alpha );
 template<> Complex<Quad> Log10( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Log10( const BigFloat& alpha );
 Complex<BigFloat> Log10( const Complex<BigFloat>& alpha );
 #endif
@@ -638,7 +668,7 @@ template<typename Integer,
          typename=void,
          typename=void>
 double Log10( const Integer& alpha );
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> double Log10( const BigInt& alpha );
 #endif
 
@@ -654,15 +684,107 @@ template<typename Real,
 Complex<Real> Sqrt( const Complex<Real>& alpha );
 
 template<> Int Sqrt( const Int& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_HALF
+inline cpu_half_type Exp(cpu_half_type const& alpha)
+{
+    return half_float::exp(alpha);
+}
+inline cpu_half_type Log(cpu_half_type const& alpha)
+{
+    return half_float::log(alpha);
+}
+inline cpu_half_type Pow(cpu_half_type const& base, cpu_half_type const& exp)
+{
+    return half_float::pow(base, exp);
+}
+inline cpu_half_type Sqrt(cpu_half_type const& x)
+{
+    return half_float::sqrt(x);
+}
+inline cpu_half_type Expm1(cpu_half_type const& alpha)
+{
+    return half_float::expm1(alpha);
+}
+inline cpu_half_type Cos(cpu_half_type const& alpha)
+{
+    return half_float::cos(alpha);
+}
+inline cpu_half_type Sin(cpu_half_type const& alpha)
+{
+    return half_float::sin(alpha);
+}
+inline cpu_half_type Tan(cpu_half_type const& alpha)
+{
+    return half_float::tan(alpha);
+}
+inline cpu_half_type Acos(cpu_half_type const& alpha)
+{
+    return half_float::acos(alpha);
+}
+inline cpu_half_type Asin(cpu_half_type const& alpha)
+{
+    return half_float::asin(alpha);
+}
+inline cpu_half_type Atan(cpu_half_type const& alpha)
+{
+    return half_float::atan(alpha);
+}
+inline cpu_half_type Cosh(cpu_half_type const& alpha)
+{
+    return half_float::cosh(alpha);
+}
+inline cpu_half_type Sinh(cpu_half_type const& alpha)
+{
+    return half_float::sinh(alpha);
+}
+inline cpu_half_type Tanh(cpu_half_type const& alpha)
+{
+    return half_float::tanh(alpha);
+}
+inline cpu_half_type Acosh(cpu_half_type const& alpha)
+{
+    return half_float::acosh(alpha);
+}
+inline cpu_half_type Asinh(cpu_half_type const& alpha)
+{
+    return half_float::asinh(alpha);
+}
+inline cpu_half_type Atanh(cpu_half_type const& alpha)
+{
+    return half_float::atanh(alpha);
+}
+#endif // HYDROGEN_HAVE_HALF
+#ifdef HYDROGEN_GPU_USE_FP16
+inline gpu_half_type Exp(gpu_half_type const& x)
+{
+    return std::exp(float(x));
+}
+inline gpu_half_type Log(gpu_half_type const& x)
+{
+    return std::log(float(x));
+}
+inline gpu_half_type Pow(gpu_half_type const& base, gpu_half_type const& exp)
+{
+    return std::pow(float(base), float(exp));
+}
+inline gpu_half_type Sqrt(gpu_half_type const& x)
+{
+    return std::sqrt(float(x));
+}
+inline gpu_half_type Expm1(gpu_half_type const& x)
+{
+    return std::expm1(float(x));
+}
+#endif // HYDROGEN_GPU_USE_FP16
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Sqrt( const DoubleDouble& alpha );
 QuadDouble Sqrt( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Sqrt( const Quad& alpha );
 Complex<Quad> Sqrt( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigInt Sqrt( const BigInt& alpha );
 BigFloat Sqrt( const BigFloat& alpha );
 Complex<BigFloat> Sqrt( const Complex<BigFloat>& alpha );
@@ -672,7 +794,7 @@ Complex<BigFloat> Sqrt( const Complex<BigFloat>& alpha );
 template<typename Field,
          typename=EnableIf<IsScalar<Field>>>
 void Sqrt( const Field& alpha, Field& sqrtAlpha );
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 void Sqrt( const BigInt& alpha, BigInt& sqrtAlpha );
 void Sqrt( const BigFloat& alpha, BigFloat& sqrtAlpha );
 void Sqrt( const Complex<BigFloat>& alpha, Complex<BigFloat>& sqrtAlpha );
@@ -687,7 +809,7 @@ template<> unsigned long ISqrt( const unsigned long& alpha );
 template<> int ISqrt( const int& alpha );
 template<> long int ISqrt( const long int& alpha );
 
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<>
 BigInt ISqrt( const BigInt& alpha );
 // A version which potentially avoids an unnecessary memory allocation
@@ -703,15 +825,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Cos( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Cos( const DoubleDouble& alpha );
 QuadDouble Cos( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Cos( const Quad& alpha );
 Complex<Quad> Cos( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Cos( const BigFloat& alpha );
 Complex<BigFloat> Cos( const Complex<BigFloat>& alpha );
 #endif
@@ -722,15 +844,15 @@ Field Sin( const Field& alpha );
 template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Sin( const Complex<Real>& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Sin( const DoubleDouble& alpha );
 QuadDouble Sin( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Sin( const Quad& alpha );
 Complex<Quad> Sin( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Sin( const BigFloat& alpha );
 Complex<BigFloat> Sin( const Complex<BigFloat>& alpha );
 #endif
@@ -742,15 +864,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Tan( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Tan( const DoubleDouble& alpha );
 QuadDouble Tan( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Tan( const Quad& alpha );
 Complex<Quad> Tan( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Tan( const BigFloat& alpha );
 Complex<BigFloat> Tan( const Complex<BigFloat>& alpha );
 #endif
@@ -762,15 +884,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Acos( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Acos( const DoubleDouble& alpha );
 QuadDouble Acos( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Acos( const Quad& alpha );
 Complex<Quad> Acos( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Acos( const BigFloat& alpha );
 Complex<BigFloat> Acos( const Complex<BigFloat>& alpha );
 #endif
@@ -782,15 +904,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Asin( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Asin( const DoubleDouble& alpha );
 QuadDouble Asin( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Asin( const Quad& alpha );
 Complex<Quad> Asin( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Asin( const BigFloat& alpha );
 Complex<BigFloat> Asin( const Complex<BigFloat>& alpha );
 #endif
@@ -802,15 +924,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Atan( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Atan( const DoubleDouble& alpha );
 QuadDouble Atan( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Atan( const Quad& alpha );
 Complex<Quad> Atan( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Atan( const BigFloat& alpha );
 Complex<BigFloat> Atan( const Complex<BigFloat>& alpha );
 #endif
@@ -826,14 +948,14 @@ template<typename Real,
          typename=void>
 Real Atan2( const Real& y, const Real& x );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Atan2( const DoubleDouble& y, const DoubleDouble& x );
 QuadDouble Atan2( const QuadDouble& y, const QuadDouble& x );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Atan2( const Quad& y, const Quad& x );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Atan2( const BigFloat& y, const BigFloat& x );
 #endif
 
@@ -847,15 +969,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Cosh( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Cosh( const DoubleDouble& alpha );
 QuadDouble Cosh( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Cosh( const Quad& alpha );
 Complex<Quad> Cosh( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Cosh( const BigFloat& alpha );
 Complex<BigFloat> Cosh( const Complex<BigFloat>& alpha );
 #endif
@@ -868,15 +990,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Sinh( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Sinh( const DoubleDouble& alpha );
 QuadDouble Sinh( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Sinh( const Quad& alpha );
 Complex<Quad> Sinh( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Sinh( const BigFloat& alpha );
 Complex<BigFloat> Sinh( const Complex<BigFloat>& alpha );
 #endif
@@ -889,15 +1011,15 @@ template<typename Field,
          typename=DisableIf<IsStdField<Field>>>
 Field Tanh( const Field& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Tanh( const DoubleDouble& alpha );
 QuadDouble Tanh( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Tanh( const Quad& alpha );
 Complex<Quad> Tanh( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Tanh( const BigFloat& alpha );
 Complex<BigFloat> Tanh( const Complex<BigFloat>& alpha );
 #endif
@@ -910,15 +1032,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Acosh( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Acosh( const DoubleDouble& alpha );
 QuadDouble Acosh( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Acosh( const Quad& alpha );
 Complex<Quad> Acosh( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Acosh( const BigFloat& alpha );
 Complex<BigFloat> Acosh( const Complex<BigFloat>& alpha );
 #endif
@@ -931,15 +1053,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Asinh( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Asinh( const DoubleDouble& alpha );
 QuadDouble Asinh( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Asinh( const Quad& alpha );
 Complex<Quad> Asinh( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Asinh( const BigFloat& alpha );
 Complex<BigFloat> Asinh( const Complex<BigFloat>& alpha );
 #endif
@@ -952,15 +1074,15 @@ template<typename Real,
          typename=DisableIf<IsStdField<Real>>>
 Complex<Real> Atanh( const Complex<Real>& alpha );
 
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 DoubleDouble Atanh( const DoubleDouble& alpha );
 QuadDouble Atanh( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 Quad Atanh( const Quad& alpha );
 Complex<Quad> Atanh( const Complex<Quad>& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 BigFloat Atanh( const BigFloat& alpha );
 Complex<BigFloat> Atanh( const Complex<BigFloat>& alpha );
 #endif
@@ -978,14 +1100,14 @@ Complex<Real> Round( const Complex<Real>& alpha );
 // Full specializations
 // ^^^^^^^^^^^^^^^^^^^^
 template<> Int Round( const Int& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> DoubleDouble Round( const DoubleDouble& alpha );
 template<> QuadDouble Round( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Round( const Quad& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigInt Round( const BigInt& alpha );
 template<> BigFloat Round( const BigFloat& alpha );
 #endif
@@ -1000,14 +1122,14 @@ Complex<Real> Ceil( const Complex<Real>& alpha );
 // Full specializations
 // ^^^^^^^^^^^^^^^^^^^^
 template<> Int Ceil( const Int& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> DoubleDouble Ceil( const DoubleDouble& alpha );
 template<> QuadDouble Ceil( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Ceil( const Quad& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigInt Ceil( const BigInt& alpha );
 template<> BigFloat Ceil( const BigFloat& alpha );
 #endif
@@ -1022,14 +1144,14 @@ Complex<Real> Floor( const Complex<Real>& alpha );
 // Full specializations
 // ^^^^^^^^^^^^^^^^^^^^
 template<> Int Floor( const Int& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> DoubleDouble Floor( const DoubleDouble& alpha );
 template<> QuadDouble Floor( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Floor( const Quad& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigInt Floor( const BigInt& alpha );
 template<> BigFloat Floor( const BigFloat& alpha );
 #endif
@@ -1095,14 +1217,14 @@ Real SolveQuadraticMinus
 // ==
 template<typename Real>
 Real Pi();
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> DoubleDouble Pi<DoubleDouble>();
 template<> QuadDouble Pi<QuadDouble>();
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Pi<Quad>();
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigFloat Pi<BigFloat>();
 BigFloat Pi( mpfr_prec_t prec );
 #endif
@@ -1112,28 +1234,28 @@ BigFloat Pi( mpfr_prec_t prec );
 template<typename Real,
          typename=EnableIf<IsReal<Real>>>
 Real Gamma( const Real& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> DoubleDouble Gamma( const DoubleDouble& alpha );
 template<> QuadDouble Gamma( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad Gamma( const Quad& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigFloat Gamma( const BigFloat& alpha );
 #endif
 
 template<typename Real,
          typename=EnableIf<IsReal<Real>>>
 Real LogGamma( const Real& alpha );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template<> DoubleDouble LogGamma( const DoubleDouble& alpha );
 template<> QuadDouble LogGamma( const QuadDouble& alpha );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template<> Quad LogGamma( const Quad& alpha );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template<> BigFloat LogGamma( const BigFloat& alpha );
 #endif
 

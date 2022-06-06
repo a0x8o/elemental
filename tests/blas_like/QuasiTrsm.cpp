@@ -116,7 +116,7 @@ int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
@@ -137,14 +137,14 @@ main( int argc, char* argv[] )
         if( gridHeight == 0 )
             gridHeight = Grid::DefaultHeight( mpi::Size(comm) );
         const GridOrder order = ( colMajor ? COLUMN_MAJOR : ROW_MAJOR );
-        const Grid g( comm, gridHeight, order );
+        const Grid g(std::move(comm), gridHeight, order );
         const LeftOrRight side = CharToLeftOrRight( sideChar );
         const UpperOrLower uplo = CharToUpperOrLower( uploChar );
         const Orientation orientation = CharToOrientation( transChar );
         SetBlocksize( nb );
 
         ComplainIfDebug();
-        OutputFromRoot(comm,"Will test QuasiTrsm ",sideChar,uploChar,transChar);
+        OutputFromRoot(g.Comm(),"Will test QuasiTrsm ",sideChar,uploChar,transChar);
 
         TestQuasiTrsm<float>
         ( print, side, uplo, orientation, m, n, float(3), g );

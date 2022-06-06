@@ -2,19 +2,30 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 #ifndef EL_CONFIG_H
 #define EL_CONFIG_H
 
+#include "hydrogen_config.h"
+
 /* Build type and version information */
 #define EL_GIT_SHA1 "@GIT_SHA1@"
 #define EL_VERSION_MAJOR "@EL_VERSION_MAJOR@"
 #define EL_VERSION_MINOR "@EL_VERSION_MINOR@"
+#define EL_VERSION_PATCH "@EL_VERSION_PATCH@"
 #define EL_CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
-#cmakedefine EL_RELEASE
+
+#ifdef HYDROGEN_RELEASE_BUILD
+#define EL_RELEASE
+#endif
+
+#ifdef Hydrogen_EXPORTS
+#define EL_EXPORTS
+#endif
+
 #cmakedefine EL_HYBRID
 #cmakedefine BUILD_SHARED_LIBS
 #cmakedefine MSVC
@@ -49,14 +60,9 @@
 #cmakedefine EL_BUILT_BLIS_LAPACK
 #cmakedefine EL_HAVE_OPENBLAS
 #cmakedefine EL_BUILT_OPENBLAS
-#cmakedefine EL_HAVE_BLAS_SUFFIX
-#cmakedefine EL_HAVE_LAPACK_SUFFIX
-#ifdef EL_HAVE_BLAS_SUFFIX
-# define EL_BLAS_SUFFIX @EL_BLAS_SUFFIX@
-#endif
-#ifdef EL_HAVE_LAPACK_SUFFIX
-# define EL_LAPACK_SUFFIX @EL_LAPACK_SUFFIX@
-#endif
+
+#cmakedefine HYDROGEN_BLAS_SUFFIX @HYDROGEN_BLAS_SUFFIX@
+#cmakedefine HYDROGEN_LAPACK_SUFFIX @HYDROGEN_LAPACK_SUFFIX@
 
 #cmakedefine EL_HAVE_SCALAPACK
 #cmakedefine EL_BUILT_SCALAPACK
@@ -82,35 +88,18 @@
 #cmakedefine EL_HAVE_OMP_SIMD
 #cmakedefine EL_HAVE_QT5
 #cmakedefine EL_AVOID_COMPLEX_MPI
-#cmakedefine EL_HAVE_CXX11RANDOM
-#cmakedefine EL_HAVE_STEADYCLOCK
-#cmakedefine EL_HAVE_NOEXCEPT
-#cmakedefine EL_HAVE_MPI_REDUCE_SCATTER_BLOCK
-#cmakedefine EL_HAVE_MPI_LONG_LONG
-#cmakedefine EL_HAVE_MPI_LONG_DOUBLE
-#cmakedefine EL_HAVE_MPI_LONG_DOUBLE_COMPLEX
-#cmakedefine EL_HAVE_MPI_C_COMPLEX
-#cmakedefine EL_HAVE_MPI_COMM_SET_ERRHANDLER
-#cmakedefine EL_HAVE_MPI_INIT_THREAD
-#cmakedefine EL_HAVE_MPI_QUERY_THREAD
-#cmakedefine EL_HAVE_MPI3_NONBLOCKING_COLLECTIVES
-#cmakedefine EL_HAVE_MPIX_NONBLOCKING_COLLECTIVES
-#cmakedefine EL_REDUCE_SCATTER_BLOCK_VIA_ALLREDUCE
 #cmakedefine EL_USE_BYTE_ALLGATHERS
 #cmakedefine EL_USE_64BIT_INTS
 #cmakedefine EL_USE_64BIT_BLAS_INTS
 
 /* Sparse-direct configuration */
 #cmakedefine EL_USE_CUSTOM_ALLTOALLV
-#cmakedefine EL_HAVE_METIS
-#cmakedefine EL_HAVE_PARMETIS
 
 /* Advanced configuration options */
 #cmakedefine EL_ZERO_INIT
 #cmakedefine EL_CACHE_WARNINGS
 #cmakedefine EL_UNALIGNED_WARNINGS
 #cmakedefine EL_VECTOR_WARNINGS
-#cmakedefine EL_AVOID_OMP_FMA
 
 #ifdef BUILD_SHARED_LIBS
 # if defined _WIN32 || defined __CYGWIN__
@@ -143,20 +132,5 @@
 #endif
 
 #cmakedefine EL_HAVE_VALGRIND
-
-/* METIS/ParMETIS */
-#ifdef BUILD_SHARED_LIBS
-# if defined _WIN32 || defined __CYGWIN__
-#  ifdef __GNUC__ /* Compiling with GNU on Windows */
-#   define METIS_EXPORT __attribute__ ((dllimport))
-#  else  /* Compiling with non-GNU on Windows (check for MSVC?) */
-#   define METIS_EXPORT __declspec(dllimport)
-#  endif
-# else
-#  define METIS_EXPORT
-# endif
-#else
-# define METIS_EXPORT
-#endif
 
 #endif /* EL_CONFIG_H */

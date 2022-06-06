@@ -26,7 +26,7 @@ void AjtaiTypeBasis( Matrix<T>& A, Int n, Base<T> alpha )
     d.Resize( n, 1 );
     for( Int j=0; j<n; ++j )
     {
-        const Real exponent = Pow(Real(2)*n-j+1,alpha);
+      const Real exponent{Pow(Real(2)*n-j+1,alpha)};
         const Real beta = Round(Pow(Real(2),exponent));
         d(j) = beta;
         A(j,j) = beta;
@@ -55,7 +55,7 @@ void AjtaiTypeBasis( AbstractDistMatrix<T>& APre, Int n, Base<T> alpha )
     for( Int jLoc=0; jLoc<ALocWidth; ++jLoc )
     {
         const Int j = A.GlobalCol( jLoc ); 
-        const Real exponent = Pow(Real(2)*n-j+1,alpha);
+        const Real exponent{Pow(Real(2)*n-j+1,alpha)};
         const Real beta = Round(Pow(Real(2),exponent));
         d.Set( j, 0, beta );
         A.Set( j, j, beta );
@@ -87,6 +87,7 @@ void AjtaiTypeBasis( AbstractDistMatrix<T>& APre, Int n, Base<T> alpha )
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

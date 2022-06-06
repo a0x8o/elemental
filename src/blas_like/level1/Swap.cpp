@@ -138,6 +138,8 @@ void RowSwap( AbstractDistMatrix<T>& A, Int to, Int from )
     T* ABuf = A.Buffer();
     const Int ALDim = A.LDim();
 
+    SyncInfo<Device::CPU> syncInfoCPU;
+
     if( toMod == fromMod )
     {
         if( toMod == colShift )
@@ -155,7 +157,8 @@ void RowSwap( AbstractDistMatrix<T>& A, Int to, Int from )
         FastResize( buf, nLocal );
         for( Int jLoc=0; jLoc<nLocal; ++jLoc )
             buf[jLoc] = ABuf[iLocTo+jLoc*ALDim];
-        mpi::SendRecv( buf.data(), nLocal, fromOwner, fromOwner, A.ColComm() );
+        mpi::SendRecv(buf.data(), nLocal, fromOwner, fromOwner, A.ColComm(),
+                      syncInfoCPU);
         for( Int jLoc=0; jLoc<nLocal; ++jLoc )
             ABuf[iLocTo+jLoc*ALDim] = buf[jLoc];
     }
@@ -167,7 +170,8 @@ void RowSwap( AbstractDistMatrix<T>& A, Int to, Int from )
         FastResize( buf, nLocal );
         for( Int jLoc=0; jLoc<nLocal; ++jLoc )
             buf[jLoc] = ABuf[iLocFrom+jLoc*ALDim];
-        mpi::SendRecv( buf.data(), nLocal, toOwner, toOwner, A.ColComm() );
+        mpi::SendRecv(
+            buf.data(), nLocal, toOwner, toOwner, A.ColComm(), syncInfoCPU);
         for( Int jLoc=0; jLoc<nLocal; ++jLoc )
             ABuf[iLocFrom+jLoc*ALDim] = buf[jLoc];
     }
@@ -215,6 +219,8 @@ void ColSwap( AbstractDistMatrix<T>& A, Int to, Int from )
     T* ABuf = A.Buffer();
     const Int ALDim = A.LDim();
 
+    SyncInfo<Device::CPU> syncInfoCPU;
+
     if( toMod == fromMod )
     {
         const Int jLocTo = (to-rowShift) / rowStride;
@@ -227,15 +233,17 @@ void ColSwap( AbstractDistMatrix<T>& A, Int to, Int from )
     {
         const Int jLocTo = (to-rowShift) / rowStride;
         const int fromOwner = Mod(from+rowAlign,rowStride);
-        mpi::SendRecv
-        ( &ABuf[jLocTo*ALDim], mLocal, fromOwner, fromOwner, A.RowComm() );
+        mpi::SendRecv(
+            &ABuf[jLocTo*ALDim], mLocal, fromOwner, fromOwner, A.RowComm(),
+            syncInfoCPU);
     }
     else if( fromMod == rowShift )
     {
         const Int jLocFrom = (from-rowShift) / rowStride;
         const int toOwner = Mod(to+rowAlign,rowStride);
-        mpi::SendRecv
-        ( &ABuf[jLocFrom*ALDim], mLocal, toOwner, toOwner, A.RowComm() );
+        mpi::SendRecv(
+            &ABuf[jLocFrom*ALDim], mLocal, toOwner, toOwner, A.RowComm(),
+            syncInfoCPU);
     }
 }
 
@@ -484,6 +492,7 @@ void HermitianSwap
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

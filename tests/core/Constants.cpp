@@ -45,6 +45,9 @@ main( int argc, char* argv[] )
 #ifdef EL_HAVE_QUAD
         QueryLimits<Quad>( "Quad-precision:" );
 #endif
+#ifdef HYDROGEN_HAVE_HALF
+        QueryLimits<cpu_half_type>( "cpu_half_type:" );
+#endif
 #ifdef EL_HAVE_MPC
         QueryLimits<BigFloat>( "BigFloat (Default):" );
         mpfr::SetPrecision( 64 );

@@ -6,6 +6,11 @@
    which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
+
+/*
+  Test integer exponentiation (alpha^beta) by the Pow(alpha,beta) method.
+*/
+
 #include <El.hpp>
 using namespace El;
 
@@ -19,6 +24,7 @@ int main( int argc, char* argv[] )
         const Int alphaMax = Input("--alphaMax","maximum base",5);
         const Int betaMax = Input("--betaMax","maximum exponent",13);
         ProcessInput();
+        PrintInputReport();
 
         for( Int alpha=alphaMin; alpha<=alphaMax; ++alpha )
         {

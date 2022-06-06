@@ -9,35 +9,69 @@
 #ifndef EL_BLAS_AXPY_UTIL_HPP
 #define EL_BLAS_AXPY_UTIL_HPP
 
-namespace El {
-namespace axpy {
-namespace util {
+#ifdef HYDROGEN_HAVE_GPU
+#include <hydrogen/blas/gpu/Axpy.hpp>
+#endif
 
-template<typename T>
-void InterleaveMatrixUpdate
-( T alpha, Int height, Int width,
-  const T* A, Int colStrideA, Int rowStrideA,
-        T* B, Int colStrideB, Int rowStrideB )
+namespace El
+{
+namespace axpy
+{
+namespace util
+{
+
+template <typename T>
+void InterleaveMatrixUpdate(
+    T alpha, Int height, Int width,
+    T const* A, Int colStrideA, Int rowStrideA,
+    T* B, Int colStrideB, Int rowStrideB,
+    SyncInfo<Device::CPU>)
 {
     // TODO: Add OpenMP parallelization and/or optimize
     for( Int j=0; j<width; ++j )
-        blas::Axpy
-        ( height, alpha,
-          &A[rowStrideA*j], colStrideA,
-          &B[rowStrideB*j], colStrideB );
+        blas::Axpy(
+            height, alpha,
+            &A[rowStrideA*j], colStrideA,
+            &B[rowStrideB*j], colStrideB);
 }
 
-template<typename T>
-void UpdateWithLocalData
-( T alpha, const ElementalMatrix<T>& A, DistMatrix<T,STAR,STAR>& B )
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T>
+void InterleaveMatrixUpdate(
+    T alpha, Int height, Int width,
+    T const* A, Int colStrideA, Int rowStrideA,
+    T* B, Int colStrideB, Int rowStrideB,
+    SyncInfo<Device::GPU> syncInfo)
+{
+    EL_DEBUG_CSE;
+    hydrogen::Axpy_GPU_impl(height, width, alpha,
+                            A, colStrideA, rowStrideA,
+                            B, colStrideB, rowStrideB,
+                            syncInfo);
+}
+#endif // HYDROGEN_HAVE_GPU
+
+template<typename T, Device D>
+void UpdateWithLocalData(
+    T alpha, ElementalMatrix<T> const& A,
+    DistMatrix<T,STAR,STAR,ELEMENT,D>& B)
 {
     EL_DEBUG_CSE
-    axpy::util::InterleaveMatrixUpdate
-    ( alpha, A.LocalHeight(), A.LocalWidth(),
-      A.LockedBuffer(),
-      1,             A.LDim(),
-      B.Buffer(A.ColShift(),A.RowShift()),
-      A.ColStride(), A.RowStride()*B.LDim() );
+
+    if (A.GetLocalDevice() != D)
+        LogicError("axpy::util::UpdateWithLocalData: Bad device.");
+
+    auto syncInfoA = SyncInfoFromMatrix(
+        static_cast<Matrix<T,D> const&>(A.LockedMatrix()));
+    auto syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
+    InterleaveMatrixUpdate(
+        alpha, A.LocalHeight(), A.LocalWidth(),
+        A.LockedBuffer(),
+        1,             A.LDim(),
+        B.Buffer(A.ColShift(),A.RowShift()),
+        A.ColStride(), A.RowStride()*B.LDim(), syncInfoB);
 }
 
 } // namespace util

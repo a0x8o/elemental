@@ -9,11 +9,41 @@
 #ifndef EL_BLAS_SENDRECV_HPP
 #define EL_BLAS_SENDRECV_HPP
 
-namespace El {
+namespace El
+{
+template <typename T>
+void SendRecv(
+    AbstractMatrix<T> const& A, AbstractMatrix<T>& B,
+    mpi::Comm const& comm, int sendRank, int recvRank)
+{
+    if (A.GetDevice() != B.GetDevice())
+        LogicError("SendRecv: Matrices must be on the same device.");
 
-template<typename T>
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        SendRecv(
+            static_cast<Matrix<T,Device::CPU> const&>(A),
+            static_cast<Matrix<T,Device::CPU>&>(B),
+            comm, sendRank, recvRank);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        SendRecv(
+            static_cast<Matrix<T,Device::GPU> const&>(A),
+            static_cast<Matrix<T,Device::GPU>&>(B),
+            comm, sendRank, recvRank);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("SendRecv: Unsupported device.");
+    }
+}
+
+template <typename T, Device D>
 void SendRecv
-( const Matrix<T>& A, Matrix<T>& B, mpi::Comm comm, int sendRank, int recvRank )
+( Matrix<T,D> const& A, Matrix<T,D>& B,
+  mpi::Comm const& comm, int sendRank, int recvRank )
 {
     EL_DEBUG_CSE
     const Int heightA = A.Height();
@@ -22,42 +52,48 @@ void SendRecv
     const Int widthB = B.Width();
     const Int sizeA = heightA*widthA;
     const Int sizeB = heightB*widthB;
-    if( heightA == A.LDim() && heightB == B.LDim() )
+
+    SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A), syncInfoB = SyncInfoFromMatrix(B);
+
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
+    if (heightA == A.LDim() && heightB == B.LDim())
     {
-        mpi::SendRecv
-        ( A.LockedBuffer(), sizeA, sendRank,
-          B.Buffer(),       sizeB, recvRank, comm );
+        mpi::SendRecv(
+            A.LockedBuffer(), sizeA, sendRank,
+            B.Buffer(),       sizeB, recvRank, comm, syncInfoB);
     }
     else if( heightA == A.LDim() )
     {
-        vector<T> recvBuf;
-        FastResize( recvBuf, sizeB );
-        mpi::SendRecv
-        ( A.LockedBuffer(), sizeA, sendRank,
-          recvBuf.data(),   sizeB, recvRank, comm );
-        copy::util::InterleaveMatrix
-        ( heightB, widthB,
-          recvBuf.data(), 1, heightB,
-          B.Buffer(),     1, B.LDim() );
+        simple_buffer<T,D> recvBuf(sizeB, syncInfoB);
+
+        mpi::SendRecv(
+             A.LockedBuffer(), sizeA, sendRank,
+             recvBuf.data(),   sizeB, recvRank, comm, syncInfoB);
+
+        copy::util::InterleaveMatrix(
+            heightB, widthB,
+            recvBuf.data(), 1, heightB,
+            B.Buffer(),     1, B.LDim(), syncInfoB);
     }
     else
     {
-        vector<T> sendBuf;
-        FastResize( sendBuf, sizeA );
-        copy::util::InterleaveMatrix
-        ( heightA, widthA,
-          A.LockedBuffer(), 1, A.LDim(),
-          sendBuf.data(),   1, heightA );
+        simple_buffer<T,D> sendBuf(sizeA, syncInfoB);
 
-        vector<T> recvBuf;
-        FastResize( recvBuf, sizeB );
-        mpi::SendRecv
-        ( sendBuf.data(), sizeA, sendRank,
-          recvBuf.data(), sizeB, recvRank, comm );
-        copy::util::InterleaveMatrix
-        ( heightB, widthB,
-          recvBuf.data(), 1, heightB,
-          B.Buffer(),     1, B.LDim() );
+        copy::util::InterleaveMatrix(
+            heightA, widthA,
+            A.LockedBuffer(), 1, A.LDim(),
+            sendBuf.data(),   1, heightA, syncInfoB);
+
+        simple_buffer<T,D> recvBuf(sizeB, syncInfoB);
+
+        mpi::SendRecv(
+            sendBuf.data(), sizeA, sendRank,
+            recvBuf.data(), sizeB, recvRank, comm, syncInfoB);
+        copy::util::InterleaveMatrix(
+            heightB, widthB,
+            recvBuf.data(), 1, heightB,
+            B.Buffer(),     1, B.LDim(), syncInfoB);
     }
 }
 
@@ -69,8 +105,17 @@ void SendRecv
 
 #define PROTO(T) \
   EL_EXTERN template void SendRecv \
-  ( const Matrix<T>& A, Matrix<T>& B, mpi::Comm comm, \
+  ( const Matrix<T,Device::CPU>& A, Matrix<T,Device::CPU>& B, mpi::Comm const& comm, \
     int sendRank, int recvRank );
+
+#ifdef HYDROGEN_HAVE_GPU
+EL_EXTERN template void SendRecv(
+    Matrix<float,Device::GPU> const&, Matrix<float,Device::GPU>&,
+    mpi::Comm const&, int, int);
+EL_EXTERN template void SendRecv(
+    Matrix<double,Device::GPU> const&, Matrix<double,Device::GPU>&,
+    mpi::Comm const&, int, int);
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

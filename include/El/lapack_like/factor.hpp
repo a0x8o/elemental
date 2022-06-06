@@ -11,20 +11,20 @@
 
 #include <El/lapack_like/perm.hpp>
 #include <El/lapack_like/util.hpp>
-#include <El/lapack_like/factor/ldl/sparse/symbolic.hpp>
-#include <El/lapack_like/factor/ldl/sparse/numeric.hpp>
+//#include <El/lapack_like/factor/ldl/sparse/symbolic.hpp>
+//#include <El/lapack_like/factor/ldl/sparse/numeric.hpp>
 
 namespace El {
 
 // Cholesky
 // ========
 template<typename Field>
-void Cholesky( UpperOrLower uplo, Matrix<Field>& A );
+void Cholesky( UpperOrLower uplo, AbstractMatrix<Field>& A );
 template<typename Field>
 void Cholesky
 ( UpperOrLower uplo, AbstractDistMatrix<Field>& A, bool scalapack=false );
-template<typename Field>
-void Cholesky( UpperOrLower uplo, DistMatrix<Field,STAR,STAR>& A );
+template<typename Field, Device D>
+void Cholesky( UpperOrLower uplo, DistMatrix<Field,STAR,STAR,ELEMENT,D>& A );
 
 template<typename Field>
 void ReverseCholesky( UpperOrLower uplo, Matrix<Field>& A );
@@ -264,85 +264,6 @@ struct RegSolveCtrl
     }
 };
 
-namespace reg_ldl {
-
-template<typename Field>
-Int RegularizedSolveAfter
-( const SparseMatrix<Field>& A,
-  const Matrix<Base<Field>>& reg,
-  const SparseLDLFactorization<Field>& sparseLDLFact,
-        Matrix<Field>& B,
-        Base<Field> relTolRefine,
-        Int maxRefineIts,
-        bool progress=false,
-        bool time=false );
-template<typename Field>
-Int RegularizedSolveAfter
-( const DistSparseMatrix<Field>& A,
-  const DistMultiVec<Base<Field>>& reg,
-  const DistSparseLDLFactorization<Field>& sparseLDLFact,
-        DistMultiVec<Field>& B,
-        Base<Field> relTolRefine,
-        Int maxRefineIts,
-        bool progress=false,
-        bool time=false );
-
-template<typename Field>
-Int RegularizedSolveAfter
-( const SparseMatrix<Field>& A,
-  const Matrix<Base<Field>>& reg,
-  const Matrix<Base<Field>>& d,
-  const SparseLDLFactorization<Field>& sparseLDLFact,
-        Matrix<Field>& B,
-        Base<Field> relTolRefine,
-        Int maxRefineIts,
-        bool progress=false,
-        bool time=false );
-template<typename Field>
-Int RegularizedSolveAfter
-( const DistSparseMatrix<Field>& A,
-  const DistMultiVec<Base<Field>>& reg,
-  const DistMultiVec<Base<Field>>& d,
-  const DistSparseLDLFactorization<Field>& sparseLDLFact,
-        DistMultiVec<Field>& B,
-        Base<Field> relTolRefine,
-        Int maxRefineIts,
-        bool progress=false,
-        bool time=false );
-
-template<typename Field>
-Int SolveAfter
-( const SparseMatrix<Field>& A,
-  const Matrix<Base<Field>>& reg,
-  const SparseLDLFactorization<Field>& sparseLDLFact,
-        Matrix<Field>& B,
-  const RegSolveCtrl<Base<Field>>& ctrl );
-template<typename Field>
-Int SolveAfter
-( const DistSparseMatrix<Field>& A,
-  const DistMultiVec<Base<Field>>& reg,
-  const DistSparseLDLFactorization<Field>& sparseLDLFact,
-        DistMultiVec<Field>& B,
-  const RegSolveCtrl<Base<Field>>& ctrl );
-
-template<typename Field>
-Int SolveAfter
-( const SparseMatrix<Field>& A,
-  const Matrix<Base<Field>>& reg,
-  const Matrix<Base<Field>>& d,
-  const SparseLDLFactorization<Field>& sparseLDLFact,
-        Matrix<Field>& B,
-  const RegSolveCtrl<Base<Field>>& ctrl );
-template<typename Field>
-Int SolveAfter
-( const DistSparseMatrix<Field>& A,
-  const DistMultiVec<Base<Field>>& reg,
-  const DistMultiVec<Base<Field>>& d,
-  const DistSparseLDLFactorization<Field>& sparseLDLFact,
-        DistMultiVec<Field>& B,
-  const RegSolveCtrl<Base<Field>>& ctrl );
-
-} // namespace reg_ldl
 
 // LU
 // ==

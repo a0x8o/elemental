@@ -16,15 +16,16 @@ void NormsFromScaledSquares
 ( const Matrix<Real>& localScales,
         Matrix<Real>& localScaledSquares,
         Matrix<Real>& normsLoc,
-        mpi::Comm comm )
+        mpi::Comm const& comm )
 {
     EL_DEBUG_CSE
     const Int nLocal = localScales.Height();
 
     // Find the maximum relative scales
     Matrix<Real> scales( nLocal, 1 );
-    mpi::AllReduce
-    ( localScales.LockedBuffer(), scales.Buffer(), nLocal, mpi::MAX, comm );
+    mpi::AllReduce(
+        localScales.LockedBuffer(), scales.Buffer(), nLocal, mpi::MAX, comm,
+        SyncInfoFromMatrix(scales));
 
     // Equilibrate the local scaled sums
     for( Int jLoc=0; jLoc<nLocal; ++jLoc )
@@ -42,9 +43,10 @@ void NormsFromScaledSquares
 
     // Combine the local contributions
     Matrix<Real> scaledSquares( nLocal, 1 );
-    mpi::AllReduce
-    ( localScaledSquares.Buffer(),
-      scaledSquares.Buffer(), nLocal, mpi::SUM, comm );
+    mpi::AllReduce(
+        localScaledSquares.Buffer(),
+        scaledSquares.Buffer(), nLocal, mpi::SUM, comm,
+        SyncInfoFromMatrix(scaledSquares));
     for( Int jLoc=0; jLoc<nLocal; ++jLoc )
         normsLoc(jLoc) = scales(jLoc)*Sqrt(scaledSquares(jLoc));
 }

@@ -69,6 +69,33 @@ void PartialColAllGather
 
 } // namespace transpose
 
+template <typename T>
+void Transpose(AbstractMatrix<T> const& A, AbstractMatrix<T>& B,
+               bool conjugate)
+{
+    EL_DEBUG_CSE
+    if (A.GetDevice() != B.GetDevice())
+        LogicError("Matrices must be on same device for Transpose.");
+
+    switch (A.GetDevice())
+    {
+    case Device::CPU:
+        Transpose(
+            static_cast<Matrix<T,Device::CPU> const&>(A),
+            static_cast<Matrix<T,Device::CPU>&>(B), conjugate);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        Transpose(
+            static_cast<Matrix<T,Device::GPU> const&>(A),
+            static_cast<Matrix<T,Device::GPU>&>(B), conjugate);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("Bad device for transform.");
+    }
+}
+
 template<typename T>
 void Transpose( const Matrix<T>& A, Matrix<T>& B, bool conjugate )
 {
@@ -76,14 +103,14 @@ void Transpose( const Matrix<T>& A, Matrix<T>& B, bool conjugate )
     const Int m = A.Height();
     const Int n = A.Width();
     B.Resize( n, m );
-#ifdef EL_HAVE_MKL
+#ifdef HYDROGEN_HAVE_MKL
     Orientation orient = ( conjugate ? ADJOINT : TRANSPOSE );
     mkl::omatcopy
-    ( orient, m, n, T(1), A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim() );
+    ( orient, m, n, T(1.0), A.LockedBuffer(), A.LDim(), B.Buffer(), B.LDim() );
 #else
     // OpenBLAS's {i,o}matcopy routines where disabled for the reasons detailed
     // in src/core/imports/openblas.cpp
-    
+
     // Blocked matrix transpose
     // Note: block size should be a multiple of cache line size and
     // should be small enough to fit in L1 cache. On recent Intel
@@ -130,6 +157,37 @@ void Transpose( const Matrix<T>& A, Matrix<T>& B, bool conjugate )
 #endif
 }
 
+
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T, typename>
+void Transpose(Matrix<T,Device::GPU> const& A,
+               Matrix<T,Device::GPU>& B, bool conjugate )
+{
+    const Int m = A.Height(), n = A.Width();
+    B.Resize(n,m);
+
+    // Syncronize here.
+    auto master_sync = SyncInfoFromMatrix(B);
+    auto SyncManager = MakeMultiSync(
+        master_sync, SyncInfoFromMatrix(A));
+
+    // Passing in the dims of B.
+    gpu_blas::Copy(
+        (conjugate ? TransposeMode::CONJ_TRANSPOSE : TransposeMode::TRANSPOSE),
+        n, m,
+        A.LockedBuffer(), A.LDim(),
+        B.Buffer(), B.LDim(),
+        master_sync);
+}
+
+template <typename T, typename, typename>
+void Transpose(Matrix<T,Device::GPU> const& A,
+               Matrix<T,Device::GPU>& B, bool /* conjugate */)
+{
+    LogicError("Bad device type!");
+}
+#endif // HYDROGEN_HAVE_GPU
+
 template<typename T>
 void Transpose
 ( const ElementalMatrix<T>& A,
@@ -148,7 +206,7 @@ void Transpose
     {
         B.Align( A.RowAlign(), A.ColAlign() );
         B.Resize( A.Width(), A.Height() );
-        Transpose( A.LockedMatrix(), B.Matrix(), conjugate );
+        Transpose(A.LockedMatrix(), B.Matrix(), conjugate);
     }
     else if( AData.colDist == BData.rowDist &&
              AData.rowDist == Collect(BData.colDist) )
@@ -187,7 +245,7 @@ void Transpose
         C->AlignWith( BData );
         Copy( A, *C );
         B.Resize( A.Width(), A.Height() );
-        Transpose( C->LockedMatrix(), B.Matrix(), conjugate );
+        Transpose(C->LockedMatrix(), B.Matrix(), conjugate);
     }
 }
 
@@ -213,7 +271,7 @@ void Transpose
         ( A.BlockWidth(), A.BlockHeight(),
           A.RowAlign(), A.ColAlign(), A.RowCut(), A.ColCut() );
         B.Resize( A.Width(), A.Height() );
-        Transpose( A.LockedMatrix(), B.Matrix(), conjugate );
+        Transpose(A.LockedMatrix(), B.Matrix(), conjugate);
     }
     else if( AData.colDist == BData.rowDist &&
              AData.rowDist == Collect(BData.colDist) )
@@ -252,7 +310,7 @@ void Transpose
         C->AlignWith( BData );
         Copy( A, *C );
         B.Resize( A.Width(), A.Height() );
-        Transpose( C->LockedMatrix(), B.Matrix(), conjugate );
+        Transpose(C->LockedMatrix(), B.Matrix(), conjugate );
     }
 }
 
@@ -283,7 +341,7 @@ void Transpose
         C->AlignWith( BCast );
         Copy( A, *C );
         BCast.Resize( A.Width(), A.Height() );
-        Transpose( C->LockedMatrix(), BCast.Matrix(), conjugate );
+        Transpose(C->LockedMatrix(), BCast.Matrix(), conjugate);
     }
     else  // A.Wrap() == BLOCK && B.Wrap() == ELEMENT
     {
@@ -293,29 +351,8 @@ void Transpose
         C->AlignWith( BCast );
         Copy( A, *C );
         BCast.Resize( A.Width(), A.Height() );
-        Transpose( C->LockedMatrix(), BCast.Matrix(), conjugate );
+        Transpose(C->LockedMatrix(), BCast.Matrix(), conjugate);
     }
-}
-
-template<typename T>
-void Transpose
-( const SparseMatrix<T>& A, SparseMatrix<T>& B, bool conjugate )
-{
-    EL_DEBUG_CSE
-    B.Resize( A.Width(), A.Height() );
-    Zero( B, false );
-    TransposeAxpy( T(1), A, B, conjugate );
-}
-
-template<typename T>
-void Transpose
-( const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B, bool conjugate )
-{
-    EL_DEBUG_CSE
-    B.SetGrid( A.Grid() );
-    B.Resize( A.Width(), A.Height() );
-    Zero( B, false );
-    TransposeAxpy( T(1), A, B, conjugate );
 }
 
 template<typename T>
@@ -348,53 +385,53 @@ void Adjoint
     Transpose( A, B, true );
 }
 
-template<typename T>
-void Adjoint( const SparseMatrix<T>& A, SparseMatrix<T>& B )
-{
-    EL_DEBUG_CSE
-    Transpose( A, B, true );
-}
-
-template<typename T>
-void Adjoint( const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B )
-{
-    EL_DEBUG_CSE
-    Transpose( A, B, true );
-}
-
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
 # define EL_EXTERN
 #else
 # define EL_EXTERN extern
 #endif
 
-#define PROTO(T) \
-  EL_EXTERN template void Transpose \
-  ( const Matrix<T>& A, Matrix<T>& B, bool conjugate ); \
-  EL_EXTERN template void Transpose \
-  ( const ElementalMatrix<T>& A, ElementalMatrix<T>& B, bool conjugate ); \
-  EL_EXTERN template void Transpose \
-  ( const BlockMatrix<T>& A, BlockMatrix<T>& B, bool conjugate ); \
-  EL_EXTERN template void Transpose \
-  ( const AbstractDistMatrix<T>& A, \
-          AbstractDistMatrix<T>& B, bool conjugate ); \
-  EL_EXTERN template void Transpose \
-  ( const SparseMatrix<T>& A, SparseMatrix<T>& B, bool conjugate ); \
-  EL_EXTERN template void Transpose \
-  ( const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B, bool conjugate ); \
-  EL_EXTERN template void Adjoint \
-  ( const Matrix<T>& A, Matrix<T>& B ); \
-  EL_EXTERN template void Adjoint \
-  ( const ElementalMatrix<T>& A, ElementalMatrix<T>& B ); \
-  EL_EXTERN template void Adjoint \
-  ( const BlockMatrix<T>& A, BlockMatrix<T>& B ); \
-  EL_EXTERN template void Adjoint \
-  ( const AbstractDistMatrix<T>& A, \
-          AbstractDistMatrix<T>& B ); \
-  EL_EXTERN template void Adjoint \
-  ( const SparseMatrix<T>& A, SparseMatrix<T>& B ); \
-  EL_EXTERN template void Adjoint \
-  ( const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B );
+#define ABSTRACT_PROTO(T)                                               \
+    EL_EXTERN template void Transpose(                                  \
+        AbstractMatrix<T> const&, AbstractMatrix<T>&, bool );           \
+    EL_EXTERN template void Transpose(                                  \
+        ElementalMatrix<T> const&, ElementalMatrix<T>&, bool );         \
+    EL_EXTERN template void Transpose(                                  \
+        BlockMatrix<T> const&, BlockMatrix<T>&, bool );                 \
+    EL_EXTERN template void Transpose(                                  \
+        AbstractDistMatrix<T> const&,                                   \
+        AbstractDistMatrix<T>&, bool );                                 \
+    EL_EXTERN template void Adjoint(                                    \
+        Matrix<T> const&, Matrix<T>& );                                 \
+    EL_EXTERN template void Adjoint(                                    \
+        ElementalMatrix<T> const&, ElementalMatrix<T>& );               \
+    EL_EXTERN template void Adjoint(                                    \
+        BlockMatrix<T> const&, BlockMatrix<T>& );                       \
+    EL_EXTERN template void Adjoint(                                    \
+        AbstractDistMatrix<T> const&,                                   \
+        AbstractDistMatrix<T>& )
+
+#define PROTO(T)                                                \
+    ABSTRACT_PROTO(T);                                          \
+    EL_EXTERN template void Transpose(                          \
+        Matrix<T> const& A, Matrix<T>& B, bool conjugate);
+
+#ifdef HYDROGEN_HAVE_GPU
+EL_EXTERN template void Transpose(
+    Matrix<float,Device::GPU> const& A, Matrix<float,Device::GPU>& B,
+    bool conjugate);
+EL_EXTERN template void Transpose(
+    Matrix<double,Device::GPU> const& A, Matrix<double,Device::GPU>& B,
+    bool conjugate);
+
+#ifdef HYDROGEN_GPU_USE_FP16
+ABSTRACT_PROTO(gpu_half_type);
+EL_EXTERN template void Transpose(
+    Matrix<gpu_half_type,Device::GPU> const& A,
+    Matrix<gpu_half_type,Device::GPU>& B,
+    bool conjugate);
+#endif // HYDROGEN_GPU_USE_FP16
+#endif // HYDROGEN_HAVE_GPU
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
@@ -403,8 +440,8 @@ void Adjoint( const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B )
 #define EL_ENABLE_BIGFLOAT
 #include <El/macros/Instantiate.h>
 
+#undef ABSTRACT_PROTO
 #undef EL_EXTERN
-
 } // namespace El
 
 #include <El/blas_like/level1/Transpose/ColAllGather.hpp>

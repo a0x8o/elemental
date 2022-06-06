@@ -9,11 +9,13 @@
 #ifndef EL_BLAS_COPY_PARTIALCOLFILTER_HPP
 #define EL_BLAS_COPY_PARTIALCOLFILTER_HPP
 
-namespace El {
-namespace copy {
+namespace El
+{
+namespace copy
+{
 
-template<typename T>
-void PartialColFilter
+template <Device D, typename T>
+void PartialColFilter_impl
 ( const ElementalMatrix<T>& A, ElementalMatrix<T>& B )
 {
     EL_DEBUG_CSE
@@ -39,14 +41,20 @@ void PartialColFilter
 
     const Int localHeight = B.LocalHeight();
 
+    SyncInfo<D> syncInfoA = SyncInfoFromMatrix(static_cast<Matrix<T,D> const&>(A.LockedMatrix())),
+        syncInfoB = SyncInfoFromMatrix(static_cast<Matrix<T,D> const&>(B.LockedMatrix()));
+
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
     if( colDiff == 0 )
     {
         const Int colShift = B.ColShift();
         const Int colOffset = (colShift-colShiftA) / colStridePart;
-        util::InterleaveMatrix
-        ( localHeight, width,
-          A.LockedBuffer(colOffset,0), colStrideUnion, A.LDim(),
-          B.Buffer(),                  1,              B.LDim() );
+        util::InterleaveMatrix(
+            localHeight, width,
+            A.LockedBuffer(colOffset,0), colStrideUnion, A.LDim(),
+            B.Buffer(),                  1,              B.LDim(),
+            syncInfoB);
     }
     else
     {
@@ -67,26 +75,50 @@ void PartialColFilter
         const Int localHeightSend = Length( height, sendColShift, colStride );
         const Int sendSize = localHeightSend*width;
         const Int recvSize = localHeight    *width;
-        vector<T> buffer;
-        FastResize( buffer, sendSize+recvSize );
-        T* sendBuf = &buffer[0];
-        T* recvBuf = &buffer[sendSize];
+        simple_buffer<T,D> buffer(sendSize+recvSize, syncInfoB);
+        T* sendBuf = buffer.data();
+        T* recvBuf = buffer.data() + sendSize;
         // Pack
-        util::InterleaveMatrix
-        ( localHeightSend, width,
-          A.LockedBuffer(sendColOffset,0), colStrideUnion, A.LDim(),
-          sendBuf,                         1,              localHeightSend );
+        util::InterleaveMatrix(
+            localHeightSend, width,
+            A.LockedBuffer(sendColOffset,0), colStrideUnion, A.LDim(),
+            sendBuf, 1, localHeightSend, syncInfoB);
+
         // Change the column alignment
-        mpi::SendRecv
-        ( sendBuf, sendSize, sendColRankPart,
-          recvBuf, recvSize, recvColRankPart, B.PartialColComm() );
+        mpi::SendRecv(
+            sendBuf, sendSize, sendColRankPart,
+            recvBuf, recvSize, recvColRankPart, B.PartialColComm(), syncInfoB);
 
         // Unpack
         // ------
-        util::InterleaveMatrix
-        ( localHeight, width,
-          recvBuf,    1, localHeight,
-          B.Buffer(), 1, B.LDim() );
+        util::InterleaveMatrix(
+            localHeight, width,
+            recvBuf,    1, localHeight,
+            B.Buffer(), 1, B.LDim(), syncInfoB);
+    }
+}
+
+template <typename T>
+void PartialColFilter
+( const ElementalMatrix<T>& A, ElementalMatrix<T>& B )
+{
+    EL_DEBUG_CSE
+    if (A.GetLocalDevice() != B.GetLocalDevice())
+        LogicError(
+            "PartialColFilter: For now, A and B must be on same device.");
+
+    switch (A.GetLocalDevice())
+    {
+    case Device::CPU:
+        PartialColFilter_impl<Device::CPU>(A,B);
+        break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+        PartialColFilter_impl<Device::GPU>(A,B);
+        break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+        LogicError("PartialColFilter: Bad device.");
     }
 }
 

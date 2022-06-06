@@ -12,45 +12,19 @@
 #ifndef EL_IMPORTS_MPI_HPP
 #define EL_IMPORTS_MPI_HPP
 
-namespace El {
+#include <El/core/imports/aluminum.hpp>
+#include <El/core/imports/mpi/comm.hpp>
+#include <El/core/imports/mpi/error.hpp>
+#include <El/core/imports/mpi/meta.hpp>
 
-using std::function;
-using std::vector;
+#include <algorithm>
+#include <functional>
+#include <vector>
 
-namespace mpi {
-
-#if defined(EL_HAVE_MPI3_NONBLOCKING_COLLECTIVES) || \
-    defined(EL_HAVE_MPIX_NONBLOCKING_COLLECTIVES)
-#define EL_HAVE_NONBLOCKING 1
-#else
-#define EL_HAVE_NONBLOCKING 0
-#endif
-
-#ifdef EL_HAVE_NONBLOCKING_COLLECTIVES
-#ifdef EL_HAVE_MPI3_NONBLOCKING_COLLECTIVES
-#define EL_NONBLOCKING_COLL(name) MPI_ ## name
-#else
-#define EL_NONBLOCKING_COLL(name) MPIX_ ## name
-#endif
-#endif
-
-struct Comm
+namespace El
 {
-    MPI_Comm comm;
-    Comm( MPI_Comm mpiComm=MPI_COMM_WORLD ) EL_NO_EXCEPT : comm(mpiComm) { }
-
-    inline int Rank() const EL_NO_RELEASE_EXCEPT;
-    inline int Size() const EL_NO_RELEASE_EXCEPT;
-};
-inline bool operator==( const Comm& a, const Comm& b ) EL_NO_EXCEPT
-{ return a.comm == b.comm; }
-inline bool operator!=( const Comm& a, const Comm& b ) EL_NO_EXCEPT
-{ return a.comm != b.comm; }
-// Hopefully, despite the fact that MPI_Comm is opaque, the following will
-// reliably hold (otherwise it must be extended). Typically, MPI_Comm is
-// either 'int' or 'void*'.
-inline bool operator<( const Comm& a, const Comm& b ) EL_NO_EXCEPT
-{ return a.comm < b.comm; }
+namespace mpi
+{
 
 struct Group
 {
@@ -91,47 +65,45 @@ struct Request
 
     MPI_Request backend;
 
-    vector<byte> buffer;
+    std::vector<byte> buffer;
     bool receivingPacked=false;
     int recvCount;
     T* unpackedRecvBuf;
 };
 
 // Standard constants
-const int ANY_SOURCE = MPI_ANY_SOURCE;
-const int ANY_TAG = MPI_ANY_TAG;
-#ifdef EL_HAVE_MPI_QUERY_THREAD
-const int THREAD_SINGLE = MPI_THREAD_SINGLE;
-const int THREAD_FUNNELED = MPI_THREAD_FUNNELED;
-const int THREAD_SERIALIZED = MPI_THREAD_SERIALIZED;
-const int THREAD_MULTIPLE = MPI_THREAD_MULTIPLE;
-#else
-const int THREAD_SINGLE = 0;
-const int THREAD_FUNNELED = 1;
-const int THREAD_SERIALIZED = 2;
-const int THREAD_MULTIPLE = 3;
-#endif
-const int UNDEFINED = MPI_UNDEFINED;
-const Group GROUP_NULL = MPI_GROUP_NULL;
-const Comm COMM_NULL = MPI_COMM_NULL;
-const Comm COMM_SELF = MPI_COMM_SELF;
-const Comm COMM_WORLD = MPI_COMM_WORLD;
-const ErrorHandler ERRORS_RETURN = MPI_ERRORS_RETURN;
-const ErrorHandler ERRORS_ARE_FATAL = MPI_ERRORS_ARE_FATAL;
-const Group GROUP_EMPTY = MPI_GROUP_EMPTY;
-const Op MAX = MPI_MAX;
-const Op MIN = MPI_MIN;
-const Op MAXLOC = MPI_MAXLOC;
-const Op MINLOC = MPI_MINLOC;
-const Op PROD = MPI_PROD;
-const Op SUM = MPI_SUM;
-const Op LOGICAL_AND = MPI_LAND;
-const Op LOGICAL_OR = MPI_LOR;
-const Op LOGICAL_XOR = MPI_LXOR;
-const Op BINARY_AND = MPI_BAND;
-const Op BINARY_OR = MPI_BOR;
-const Op BINARY_XOR = MPI_BXOR;
+extern const int ANY_SOURCE;
+extern const int ANY_TAG;
+extern const int THREAD_SINGLE;
+extern const int THREAD_FUNNELED;
+extern const int THREAD_SERIALIZED;
+extern const int THREAD_MULTIPLE;
 
+extern const int UNDEFINED;
+extern const Group GROUP_NULL;
+extern const Comm COMM_NULL;// = MPI_COMM_NULL;
+extern const Comm COMM_SELF;// = MPI_COMM_SELF;
+extern const Comm COMM_WORLD;// = MPI_COMM_WORLD;
+extern const ErrorHandler ERRORS_RETURN;
+extern const ErrorHandler ERRORS_ARE_FATAL;
+extern const Group GROUP_EMPTY;
+extern const Op MAX;
+extern const Op MIN;
+extern const Op MAXLOC;
+extern const Op MINLOC;
+extern const Op PROD;
+extern const Op SUM;
+extern const Op LOGICAL_AND;
+extern const Op LOGICAL_OR;
+extern const Op LOGICAL_XOR;
+extern const Op BINARY_AND;
+extern const Op BINARY_OR;
+extern const Op BINARY_XOR;
+
+/*!
+  Explicit instantiation code for Types is in src/core/mpi_register.cpp
+  (not src/core/imports/mpi.cpp).
+*/
 template<typename T>
 struct Types
 {
@@ -165,11 +137,41 @@ struct Types
     static bool createdUserCommOp;
     static El::mpi::Op userCommOp;
 
-    static function<T(const T&,const T&)> userFunc, userCommFunc;
+    static std::function<T(const T&,const T&)> userFunc, userCommFunc;
 
     // Internally called once per type between MPI_Init and MPI_Finalize
     static void Destroy();
 };
+
+// Silence clang warnings. These are ETI'd in src/core/mpi_register.hpp.
+#if !defined H_INSTANTIATING_MPI_TYPES_STRUCT
+extern template struct Types<byte>;
+extern template struct Types<short>;
+extern template struct Types<unsigned>;
+extern template struct Types<unsigned long>;
+#ifdef EL_USE_64BIT_INTS
+extern template struct Types<int>; // Avoid conflict with Int
+#endif
+extern template struct Types<long int>;
+extern template struct Types<unsigned long long>;
+#ifndef EL_USE_64BIT_INTS
+extern template struct Types<long long int>; // Avoid conflict with Int
+#endif
+
+#define PROTO(T)                                \
+    extern template struct Types<T>;            \
+    extern template struct Types<ValueInt<T>>;  \
+    extern template struct Types<Entry<T>>;
+
+#define EL_ENABLE_DOUBLEDOUBLE
+#define EL_ENABLE_QUADDOUBLE
+#define EL_ENABLE_QUAD
+#define EL_ENABLE_BIGINT
+#define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
+#include <El/macros/Instantiate.h>
+#undef PROTO
+#endif // !defined H_INSTANTIATING_MPI_TYPES_STRUCT
 
 template<typename T>
 struct MPIBaseHelper { typedef T value; };
@@ -222,35 +224,39 @@ void Finalize() EL_NO_EXCEPT;
 bool Initialized() EL_NO_EXCEPT;
 bool Finalized() EL_NO_EXCEPT;
 int QueryThread() EL_NO_EXCEPT;
-void Abort( Comm comm, int errCode ) EL_NO_EXCEPT;
+void Abort( Comm const& comm, int errCode ) EL_NO_EXCEPT;
 double Time() EL_NO_EXCEPT;
 void Create( UserFunction* func, bool commutes, Op& op ) EL_NO_RELEASE_EXCEPT;
 void Free( Op& op ) EL_NO_RELEASE_EXCEPT;
 void Free( Datatype& type ) EL_NO_RELEASE_EXCEPT;
 
 // Communicator manipulation
-int Rank( Comm comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;
-int Size( Comm comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;
+int Rank( Comm const& comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;
+int Size( Comm const& comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;
 void Create
-( Comm parentComm, Group subsetGroup, Comm& subsetComm ) EL_NO_RELEASE_EXCEPT;
-void Dup( Comm original, Comm& duplicate ) EL_NO_RELEASE_EXCEPT;
-void Split( Comm comm, int color, int key, Comm& newComm ) EL_NO_RELEASE_EXCEPT;
+( Comm const& parentComm, Group subsetGroup, Comm& subsetComm ) EL_NO_RELEASE_EXCEPT;
+void Dup( Comm const& original, Comm& duplicate ) EL_NO_RELEASE_EXCEPT;
+void Split( Comm const& comm, int color, int key, Comm& newComm ) EL_NO_RELEASE_EXCEPT;
 void Free( Comm& comm ) EL_NO_RELEASE_EXCEPT;
-bool Congruent( Comm comm1, Comm comm2 ) EL_NO_RELEASE_EXCEPT;
+bool Congruent( Comm const& comm1, Comm const& comm2 ) EL_NO_RELEASE_EXCEPT;
 void ErrorHandlerSet
-( Comm comm, ErrorHandler errorHandler ) EL_NO_RELEASE_EXCEPT;
+( Comm const& comm, ErrorHandler errorHandler ) EL_NO_RELEASE_EXCEPT;
+bool CongruentToCommSelf( Comm const& comm ) EL_NO_RELEASE_EXCEPT;
+bool CongruentToCommWorld( Comm const& comm ) EL_NO_RELEASE_EXCEPT;
+
+Comm NewWorldComm() EL_NO_RELEASE_EXCEPT;
 
 // Cartesian communicator routines
 void CartCreate
-( Comm comm, int numDims, const int* dimensions, const int* periods,
+( Comm const& comm, int numDims, const int* dimensions, const int* periods,
   bool reorder, Comm& cartComm ) EL_NO_RELEASE_EXCEPT;
 void CartSub
-( Comm comm, const int* remainingDims, Comm& subComm ) EL_NO_RELEASE_EXCEPT;
+( Comm const& comm, const int* remainingDims, Comm& subComm ) EL_NO_RELEASE_EXCEPT;
 
 // Group manipulation
 int Rank( Group group ) EL_NO_RELEASE_EXCEPT;
 int Size( Group group ) EL_NO_RELEASE_EXCEPT;
-void CommGroup( Comm comm, Group& group ) EL_NO_RELEASE_EXCEPT;
+void CommGroup( Comm const& comm, Group& group ) EL_NO_RELEASE_EXCEPT;
 void Dup( Group group, Group& newGroup ) EL_NO_RELEASE_EXCEPT;
 void Union( Group groupA, Group groupB, Group& newGroup ) EL_NO_RELEASE_EXCEPT;
 void Incl
@@ -264,26 +270,27 @@ bool Congruent( Group group1, Group group2 ) EL_NO_RELEASE_EXCEPT;
 int Translate
 ( Group origGroup, int origRank, Group newGroup ) EL_NO_RELEASE_EXCEPT;
 int Translate
-( Comm  origComm,  int origRank, Group newGroup ) EL_NO_RELEASE_EXCEPT;
+( Comm const& origComm,  int origRank, Group newGroup ) EL_NO_RELEASE_EXCEPT;
 int Translate
-( Group origGroup, int origRank, Comm  newComm  ) EL_NO_RELEASE_EXCEPT;
-int Translate
-( Comm  origComm,  int origRank, Comm  newComm  ) EL_NO_RELEASE_EXCEPT;
+( Group origGroup, int origRank, Comm const& newComm ) EL_NO_RELEASE_EXCEPT;
+int Translate(
+    Comm const& origComm,  int origRank,
+    Comm const& newComm ) EL_NO_RELEASE_EXCEPT;
 void Translate
 ( Group origGroup, int size, const int* origRanks,
-  Group newGroup,                  int* newRanks ) EL_NO_RELEASE_EXCEPT;
+  Group newGroup, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 void Translate
-( Comm origComm,  int size, const int* origRanks,
-  Group newGroup,                 int* newRanks ) EL_NO_RELEASE_EXCEPT;
+( Comm const& origComm,  int size, const int* origRanks,
+  Group newGroup, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 void Translate
 ( Group origGroup, int size, const int* origRanks,
-  Comm newComm,                    int* newRanks ) EL_NO_RELEASE_EXCEPT;
+  Comm const& newComm, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 void Translate
-( Comm origComm, int size, const int* origRanks,
-  Comm newComm,                  int* newRanks ) EL_NO_RELEASE_EXCEPT;
+( Comm const& origComm, int size, const int* origRanks,
+  Comm const& newComm, int* newRanks ) EL_NO_RELEASE_EXCEPT;
 
 // Utilities
-void Barrier( Comm comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;
+void Barrier( Comm const& comm=COMM_WORLD ) EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
 void Wait( Request<T>& request ) EL_NO_RELEASE_EXCEPT;
@@ -312,14 +319,14 @@ EL_NO_RELEASE_EXCEPT;
 template<typename T>
 bool Test( Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 bool IProbe
-( int source, int tag, Comm comm, Status& status ) EL_NO_RELEASE_EXCEPT;
+( int source, int tag, Comm const& comm, Status& status ) EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
 int GetCount( Status& status ) EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
 void SetUserReduceFunc
-( function<T(const T&,const T&)> func, bool commutative=true )
+( std::function<T(const T&,const T&)> func, bool commutative=true )
 {
     if( commutative )
         Types<T>::userCommFunc = func;
@@ -327,339 +334,476 @@ void SetUserReduceFunc
         Types<T>::userFunc = func;
 }
 
+// This function ensures that the collective comm duplications have a
+// chance to happen collectively. The onus is on the developer to
+// ensure that they actually happen.
+template <typename T, Collective C, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,C>>>
+inline void EnsureComm(Comm const& comm, SyncInfo<D> const& syncInfo)
+{
+#ifdef HYDROGEN_HAVE_ALUMINUM
+    using Backend = BestBackend<T,D,C>;
+    comm.template GetComm<Backend>(syncInfo);
+#endif // HYDROGEN_HAVE_ALUMINUM
+}
+
+template <typename T, Collective C, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,C>>,
+          typename=void>
+inline void EnsureComm(Comm const&, SyncInfo<D> const&)
+{
+    // DO NOTHING
+}
+
 // Point-to-point communication
 // ============================
 
 // Send
 // ----
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void TaggedSend
-( const Real* buf, int count, int to, int tag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void TaggedSend
-( const Complex<Real>* buf, int count, int to, int tag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-
-template<typename T,
+template <typename Real, Device D,
+          typename=EnableIf<IsPacked<Real>>>
+void TaggedSend(
+    const Real* buf, int count, int to, int tag, Comm const& comm,
+    SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
+template <typename Real, Device D,
+          typename=EnableIf<IsPacked<Real>>>
+void TaggedSend(
+    const Complex<Real>* buf, int count, int to, int tag, Comm const& comm,
+    SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
-void TaggedSend( const T* buf, int count, int to, int tag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+void TaggedSend(
+    const T* buf, int count, int to, int tag, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 
 // If the tag is irrelevant
-template<typename T>
-void Send( const T* buf, int count, int to, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template<typename T, Device D>
+void Send( const T* buf, int count, int to, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 // If the send-count is one
 template<typename T>
-void TaggedSend( T b, int to, int tag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+void TaggedSend( T b, int to, int tag, Comm const& comm )
+    EL_NO_RELEASE_EXCEPT;
 
 // If the send-count is one and the tag is irrelevant
 template<typename T>
-void Send( T b, int to, Comm comm ) EL_NO_RELEASE_EXCEPT;
+void Send( T b, int to, Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
 // Non-blocking send
 // -----------------
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedISend
-( const Real* buf, int count, int to, int tag, Comm comm,
+( const Real* buf, int count, int to, int tag, Comm const& comm,
   Request<Real>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedISend
-( const Complex<Real>* buf, int count, int to, int tag, Comm comm,
+( const Complex<Real>* buf, int count, int to, int tag, Comm const& comm,
   Request<Complex<Real>>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename T,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void TaggedISend
-( const T* buf, int count, int to, int tag, Comm comm,
+( const T* buf, int count, int to, int tag, Comm const& comm,
   Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 
 // If the tag is irrelevant
 template<typename T>
-void ISend( const T* buf, int count, int to, Comm comm, Request<T>& request )
+void ISend( const T* buf, int count, int to, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the send count is one
 template<typename T>
-void TaggedISend( T b, int to, int tag, Comm comm, Request<T>& request )
+void TaggedISend( T b, int to, int tag, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the send count is one and the tag is irrelevant
 template<typename T>
-void ISend( T b, int to, Comm comm, Request<T>& request ) EL_NO_RELEASE_EXCEPT;
+void ISend( T b, int to, Comm const& comm, Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 
 // Non-blocking ready-mode send
 // ----------------------------
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedIRSend
-( const Real* buf, int count, int to, int tag, Comm comm,
+( const Real* buf, int count, int to, int tag, Comm const& comm,
   Request<Real>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedIRSend
-( const Complex<Real>* buf, int count, int to, int tag, Comm comm,
+( const Complex<Real>* buf, int count, int to, int tag, Comm const& comm,
   Request<Complex<Real>>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename T,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void TaggedIRSend
-( const T* buf, int count, int to, int tag, Comm comm,
+( const T* buf, int count, int to, int tag, Comm const& comm,
   Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 
 // If the tag is irrelevant
 template<typename T>
-void IRSend( const T* buf, int count, int to, Comm comm, Request<T>& request )
+void IRSend( const T* buf, int count, int to, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the send count is one
 template<typename T>
-void TaggedIRSend( T b, int to, int tag, Comm comm, Request<T>& request )
+void TaggedIRSend( T b, int to, int tag, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the send count is one and the tag is irrelevant
 template<typename T>
-void IRSend( T b, int to, Comm comm, Request<T>& request ) EL_NO_RELEASE_EXCEPT;
+void IRSend( T b, int to, Comm const& comm, Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 
 // Non-blocking synchronous Send
 // -----------------------------
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedISSend
-( const Real* buf, int count, int to, int tag, Comm comm,
+( const Real* buf, int count, int to, int tag, Comm const& comm,
   Request<Real>& request )
 EL_NO_RELEASE_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedISSend
-( const Complex<Real>* buf, int count, int to, int tag, Comm comm,
+( const Complex<Real>* buf, int count, int to, int tag, Comm const& comm,
   Request<Complex<Real>>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename T,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void TaggedISSend
-( const T* buf, int count, int to, int tag, Comm comm,
+( const T* buf, int count, int to, int tag, Comm const& comm,
   Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the tag is irrelevant
 template<typename T>
-void ISSend( const T* buf, int count, int to, Comm comm, Request<T>& request )
+void ISSend( const T* buf, int count, int to, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the send count is one
 template<typename T>
-void TaggedISSend( T b, int to, int tag, Comm comm, Request<T>& request )
+void TaggedISSend( T b, int to, int tag, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the send count is one and the tag is irrelevant
 template<typename T>
-void ISSend( T b, int to, Comm comm, Request<T>& request )
+void ISSend( T b, int to, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // Recv
 // ----
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedRecv
-( Real* buf, int count, int from, int tag, Comm comm )
+( Real* buf, int count, int from, int tag, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedRecv
-( Complex<Real>* buf, int count, int from, int tag, Comm comm )
+( Complex<Real>* buf, int count, int from, int tag, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename T,
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void TaggedRecv
-( T* buf, int count, int from, int tag, Comm comm )
+( T* buf, int count, int from, int tag, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
 // If the tag is irrelevant
-template<typename T>
-void Recv( T* buf, int count, int from, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+void Recv( T* buf, int count, int from, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 // If the recv count is one
 template<typename T>
-T TaggedRecv( int from, int tag, Comm comm ) EL_NO_RELEASE_EXCEPT;
+T TaggedRecv( int from, int tag, Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
 // If the recv count is one and the tag is irrelevant
 template<typename T>
-T Recv( int from, Comm comm ) EL_NO_RELEASE_EXCEPT;
+T Recv( int from, Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
 // Non-blocking recv
 // -----------------
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedIRecv
-( Real* buf, int count, int from, int tag, Comm comm,
+( Real* buf, int count, int from, int tag, Comm const& comm,
   Request<Real>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void TaggedIRecv
-( Complex<Real>* buf, int count, int from, int tag, Comm comm,
+( Complex<Real>* buf, int count, int from, int tag, Comm const& comm,
   Request<Complex<Real>>& request ) EL_NO_RELEASE_EXCEPT;
 template<typename T,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void TaggedIRecv
-( T* buf, int count, int from, int tag, Comm comm,
+( T* buf, int count, int from, int tag, Comm const& comm,
   Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 
 // If the tag is irrelevant
 template<typename T>
-void IRecv( T* buf, int count, int from, Comm comm, Request<T>& request )
+void IRecv( T* buf, int count, int from, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the recv count is one
 template<typename T>
-T TaggedIRecv( int from, int tag, Comm comm, Request<T>& request )
+T TaggedIRecv( int from, int tag, Comm const& comm, Request<T>& request )
 EL_NO_RELEASE_EXCEPT;
 
 // If the recv count is one and the tag is irrelevant
 template<typename T>
-T IRecv( int from, Comm comm, Request<T>& request ) EL_NO_RELEASE_EXCEPT;
+T IRecv( int from, Comm const& comm, Request<T>& request ) EL_NO_RELEASE_EXCEPT;
 
 // SendRecv
 // --------
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
-void TaggedSendRecv
-( const Real* sbuf, int sc, int to,   int stag,
-        Real* rbuf, int rc, int from, int rtag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void TaggedSendRecv
-( const Complex<Real>* sbuf, int sc, int to,   int stag,
-        Complex<Real>* rbuf, int rc, int from, int rtag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void TaggedSendRecv
-( const T* sbuf, int sc, int to,   int stag,
-        T* rbuf, int rc, int from, int rtag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+void TaggedSendRecv(
+    const Real* sbuf, int sc, int to,   int stag,
+    Real* rbuf, int rc, int from, int rtag, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
+template <typename Real, Device D,
+          typename=EnableIf<IsPacked<Real>>>
+void TaggedSendRecv(
+    const Complex<Real>* sbuf, int sc, int to,   int stag,
+    Complex<Real>* rbuf, int rc, int from, int rtag, Comm const& comm,
+    SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D,
+          typename=DisableIf<IsPacked<T>>,
+          typename=void>
+void TaggedSendRecv(
+    const T* sbuf, int sc, int to,   int stag,
+    T* rbuf, int rc, int from, int rtag, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 // If the tags are irrelevant
-template<typename T>
-void SendRecv
-( const T* sbuf, int sc, int to,
-        T* rbuf, int rc, int from, Comm comm ) EL_NO_RELEASE_EXCEPT;
+#define COLL Collective::SENDRECV
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+void SendRecv(const T* sbuf, int sc, int to,
+              T* rbuf, int rc, int from, Comm const& comm,
+              SyncInfo<D> const& syncInfo);
+
+// Aluminum in-place
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+void SendRecv(T* buf, int count, int to, int from, Comm const& comm,
+              SyncInfo<D> const& syncInfo);
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+void SendRecv(const T* sbuf, int sc, int to,
+              T* rbuf, int rc, int from, Comm const& comm,
+              SyncInfo<D> const& syncInfo);
+
+// Non-aluminum, device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=void>
+void SendRecv(const T* sbuf, int sc, int to,
+              T* rbuf, int rc, int from, Comm const& comm,
+              SyncInfo<D> const& syncInfo);
+
+// Non-aluminum, non-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+void SendRecv( T* buf, int count, int to, int from, Comm const& comm,
+               SyncInfo<D> const& syncInfo);
+
+// Non-aluminum, device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=void>
+void SendRecv( T* buf, int count, int to, int from, Comm const& comm,
+               SyncInfo<D> const& syncInfo);
+
+#undef COLL // Collective::SENDRECV
 
 // If the send and recv counts are one
-template<typename T>
-T TaggedSendRecv
-( T sb, int to, int stag, int from, int rtag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+T TaggedSendRecv(
+    T sb, int to, int stag, int from, int rtag, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 // If the send and recv counts are one and the tags don't matter
-template<typename T>
-T SendRecv( T sb, int to, int from, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+T SendRecv( T sb, int to, int from, Comm const& comm, SyncInfo<D> const& );
 
 // Single-buffer SendRecv
 // ----------------------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void TaggedSendRecv
-( Real* buf, int count, int to, int stag, int from, int rtag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void TaggedSendRecv
-( Complex<Real>* buf, int count, int to, int stag, int from, int rtag,
-  Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void TaggedSendRecv
-( T* buf, int count, int to, int stag, int from, int rtag, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-
-// If the tags don't matter
-template<typename T>
-void SendRecv( T* buf, int count, int to, int from, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template <typename Real, Device D,
+          typename=EnableIf<IsPacked<Real>>>
+void TaggedSendRecv(
+    Real* buf, int count, int to, int stag, int from, int rtag, Comm const& comm,
+    SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
+template <typename Real, Device D,
+          typename=EnableIf<IsPacked<Real>>>
+void TaggedSendRecv(
+    Complex<Real>* buf, int count, int to, int stag, int from, int rtag,
+    Comm const& comm, SyncInfo<D> const& ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D,
+          typename=DisableIf<IsPacked<T>>,
+          typename=void>
+void TaggedSendRecv(
+    T* buf, int count, int to, int stag, int from, int rtag, Comm const& comm,
+    SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 // Collective communication
 // ========================
 
 // Broadcast
 // ---------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Broadcast( Real* buf, int count, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Broadcast( Complex<Real>* buf, int count, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void Broadcast( T* buf, int count, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+#define COLL Collective::BROADCAST
+#define COLLECTIVE_SIGNATURE                            \
+    void Broadcast(                                     \
+        T* buffer, int count, int root, Comm const& comm,      \
+        SyncInfo<D> const&)
+#define COLLECTIVE_SIGNATURE_COMPLEX                            \
+    void Broadcast(                                             \
+        Complex<T>* buffer, int count, int root, Comm const& comm,     \
+        SyncInfo<D> const&)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
 
 // If the message length is one
-template<typename T>
-void Broadcast( T& b, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template<typename T, Device D>
+void Broadcast( T& b, int root, Comm const& comm, SyncInfo<D> const& );
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::BROADCAST
 
 // Non-blocking broadcast
 // ----------------------
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void IBroadcast
-( Real* buf, int count, int root, Comm comm, Request<Real>& request );
+( Real* buf, int count, int root, Comm const& comm, Request<Real>& request );
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void IBroadcast
-( Complex<Real>* buf, int count, int root, Comm comm,
+( Complex<Real>* buf, int count, int root, Comm const& comm,
   Request<Complex<Real>>& request );
 template<typename T,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void IBroadcast
-( T* buf, int count, int root, Comm comm, Request<T>& request );
+( T* buf, int count, int root, Comm const& comm, Request<T>& request );
 
 // If the message length is one
 template<typename T>
-void IBroadcast( T& b, int root, Comm comm, Request<T>& request );
+void IBroadcast( T& b, int root, Comm const& comm, Request<T>& request );
 
 // Gather
 // ------
+
+#define COLL Collective::GATHER
+#define COLLECTIVE_SIGNATURE                    \
+    void Gather(                                \
+        const T* sbuf, int sc,                  \
+        T* rbuf, int rc, int root, Comm const& comm,   \
+        SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                     \
+    void Gather(                                         \
+        const Complex<T>* sbuf, int sc,                  \
+        Complex<T>* rbuf, int rc, int root, Comm const& comm,   \
+        SyncInfo<D> const& syncInfo)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
 // Even though EL_AVOID_COMPLEX_MPI being defined implies that an std::vector
 // copy of the input data will be created, and the memory allocation can clearly
 // fail and throw an exception, said exception is not necessarily thrown on
 // Linux platforms due to the "optimistic" allocation policy. Therefore we will
 // go ahead and allow std::terminate to be called should such an std::bad_alloc
 // exception occur in a Release build
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Gather
-( const Real* sbuf, int sc,
-        Real* rbuf, int rc, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void  Gather
-( const Complex<Real>* sbuf, int sc,
-        Complex<Real>* rbuf, int rc, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,typename=void>
-void Gather
-( const T* sbuf, int sc,
-        T* rbuf, int rc, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL /* Collective::GATHER */
 
 // Non-blocking gather
 // -------------------
@@ -667,207 +811,333 @@ template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void IGather
 ( const Real* sbuf, int sc,
-        Real* rbuf, int rc, int root, Comm comm,
+        Real* rbuf, int rc, int root, Comm const& comm,
   Request<Real>& request );
 template<typename Real,
          typename=EnableIf<IsPacked<Real>>>
 void IGather
 ( const Complex<Real>* sbuf, int sc,
         Complex<Real>* rbuf, int rc,
-  int root, Comm comm,
+  int root, Comm const& comm,
   Request<Complex<Real>>& request );
 template<typename T,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void IGather
 ( const T* sbuf, int sc,
-        T* rbuf, int rc, int root, Comm comm,
+        T* rbuf, int rc, int root, Comm const& comm,
   Request<T>& request );
 
 // Gather with variable recv sizes
 // -------------------------------
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void Gather
 ( const Real* sbuf, int sc,
         Real* rbuf, const int* rcs, const int* rds,
-  int root, Comm comm )
+  int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void Gather
 ( const Complex<Real>* sbuf, int sc,
         Complex<Real>* rbuf, const int* rcs, const int* rds,
-  int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename T,
+  int root, Comm const& comm, SyncInfo<D> const& ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void Gather
 ( const T* sbuf, int sc,
         T* rbuf, const int* rcs, const int* rds,
-  int root, Comm comm )
+  int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
 // AllGather
 // ---------
 // NOTE: See the corresponding note for Gather on std::bad_alloc exceptions
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllGather
-( const Real* sbuf, int sc,
-        Real* rbuf, int rc, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllGather
-( const Complex<Real>* sbuf, int sc,
-        Complex<Real>* rbuf, int rc, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void AllGather
-( const T* sbuf, int sc,
-        T* rbuf, int rc, Comm comm ) EL_NO_RELEASE_EXCEPT;
+
+#define COLL Collective::ALLGATHER
+#define COLLECTIVE_SIGNATURE                                    \
+    void AllGather(                                             \
+        T const* sbuf, int sc, T* rbuf, int rc, Comm const& comm,      \
+        SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                                    \
+    void AllGather(                                                     \
+        Complex<T> const* sbuf, int sc, Complex<T>* rbuf, int rc, Comm const& comm, \
+        SyncInfo<D> const& syncInfo)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::ALLGATHER
 
 // AllGather with variable recv sizes
 // ----------------------------------
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void AllGather
 ( const Real* sbuf, int sc,
-        Real* rbuf, const int* rcs, const int* rds, Comm comm )
+        Real* rbuf, const int* rcs, const int* rds, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void AllGather
 ( const Complex<Real>* sbuf, int sc,
         Complex<Real>* rbuf, const int* rcs, const int* rds,
-  Comm comm )
+  Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename T,
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void AllGather
 ( const T* sbuf, int sc,
-        T* rbuf, const int* rcs, const int* rds, Comm comm )
+        T* rbuf, const int* rcs, const int* rds, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
 // Scatter
 // -------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Scatter
-( const Real* sbuf, int sc,
-        Real* rbuf, int rc, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Scatter
-( const Complex<Real>* sbuf, int sc,
-        Complex<Real>* rbuf, int rc, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void Scatter
-( const T* sbuf, int sc,
-        T* rbuf, int rc, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+#define COLL Collective::SCATTER
+#define COLLECTIVE_SIGNATURE                    \
+    void Scatter(                               \
+        const T* sbuf, int sc,                  \
+        T* rbuf, int rc, int root, Comm const& comm,   \
+        SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                    \
+    void Scatter(                                       \
+        const Complex<T>* sbuf, int sc,                 \
+        Complex<T>* rbuf, int rc, int root, Comm const& comm,  \
+        SyncInfo<D> const& syncInfo)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
 
 // In-place option
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
-void Scatter( Real* buf, int sc, int rc, int root, Comm comm )
+void Scatter( Real* buf, int sc, int rc, int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
-void Scatter( Complex<Real>* buf, int sc, int rc, int root, Comm comm )
+void Scatter( Complex<Real>* buf, int sc, int rc, int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename T,
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
-void Scatter( T* buf, int sc, int rc, int root, Comm comm )
+void Scatter( T* buf, int sc, int rc, int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::SCATTER
 
 // TODO(poulson): MPI_Scatterv support
 
 // AllToAll
 // --------
 // NOTE: See the corresponding note on std::bad_alloc for Gather
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllToAll
-( const Real* sbuf, int sc,
-        Real* rbuf, int rc, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllToAll
-( const Complex<Real>* sbuf, int sc,
-        Complex<Real>* rbuf, int rc, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void AllToAll
-( const T* sbuf, int sc,
-        T* rbuf, int rc, Comm comm ) EL_NO_RELEASE_EXCEPT;
+#define COLL Collective::ALLTOALL
+#define COLLECTIVE_SIGNATURE                                    \
+    void AllToAll(                                              \
+        T const* sbuf, int sc, T* rbuf, int rc, Comm const& comm,      \
+        SyncInfo<D> const&)
+#define COLLECTIVE_SIGNATURE_COMPLEX                                    \
+    void AllToAll(                                                      \
+        Complex<T> const* sbuf, int sc, Complex<T>* rbuf, int rc,       \
+        Comm const& comm, SyncInfo<D> const&)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::ALLTOALL
 
 // AllToAll with non-uniform send/recv sizes
 // -----------------------------------------
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void AllToAll
 ( const Real* sbuf, const int* scs, const int* sds,
-        Real* rbuf, const int* rcs, const int* rds, Comm comm )
+        Real* rbuf, const int* rcs, const int* rds, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void AllToAll
 ( const Complex<Real>* sbuf, const int* scs, const int* sds,
         Complex<Real>* rbuf, const int* rcs, const int* rds,
-  Comm comm )
+  Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename T,
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void AllToAll
 ( const T* sbuf, const int* scs, const int* sds,
-        T* rbuf, const int* rcs, const int* rds, Comm comm )
+        T* rbuf, const int* rcs, const int* rds, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
-vector<T> AllToAll
-( const vector<T>& sendBuf,
-  const vector<int>& sendCounts,
-  const vector<int>& sendDispls,
-  Comm comm ) EL_NO_RELEASE_EXCEPT;
+std::vector<T> AllToAll
+( const std::vector<T>& sendBuf,
+  const std::vector<int>& sendCounts,
+  const std::vector<int>& sendDispls,
+  Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
 // Reduce
 // ------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Reduce
-( const Real* sbuf, Real* rbuf, int count, Op op, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Reduce
-( const Complex<Real>* sbuf, Complex<Real>* rbuf, int count, Op op,
-  int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void Reduce
-( const T* sbuf, T* rbuf, int count, Op op, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+#define COLL Collective::REDUCE
+#define COLLECTIVE_SIGNATURE                                    \
+    void Reduce(                                                \
+        T const* sbuf, T* rbuf, int count, Op op,               \
+        int root, Comm const& comm, SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                                    \
+    void Reduce(                                                        \
+        Complex<T> const* sbuf, Complex<T>* rbuf, int count, Op op,     \
+        int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 
-template<typename T,class OpClass,
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
 void Reduce
 ( const T* sb, T* rb, int count, OpClass op, bool commutative,
-  int root, Comm comm )
+  int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Reduce( sb, rb, count, UserCommOp<T>(), root, comm );
     else
@@ -875,21 +1145,23 @@ EL_NO_RELEASE_EXCEPT
 }
 
 // Default to SUM
-template<typename T>
-void Reduce( const T* sbuf, T* rbuf, int count, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+void Reduce(
+    const T* sbuf, T* rbuf, int count, int root, Comm const& comm,
+    SyncInfo<D> const& syncInfo);
 
 // With a message-size of one
-template<typename T>
-T Reduce( T sb, Op op, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+T Reduce( T sb, Op op, int root, Comm const& comm,
+          SyncInfo<D> const& syncInfo );
 
-template<typename T,class OpClass,
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
 T Reduce
-( T sb, OpClass op, bool commutative, int root, Comm comm )
+( T sb, OpClass op, bool commutative, int root, Comm const& comm )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         return Reduce( sb, UserCommOp<T>(), root, comm );
     else
@@ -897,32 +1169,62 @@ EL_NO_RELEASE_EXCEPT
 }
 
 // With a message-size of one and default to SUM
-template<typename T>
-T Reduce( T sb, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+T Reduce( T sb, int root, Comm const& comm, SyncInfo<D> const& syncInfo );
 
 // Single-buffer reduce
 // --------------------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Reduce( Real* buf, int count, Op op, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void Reduce( Complex<Real>* buf, int count, Op op, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void Reduce( T* buf, int count, Op op, int root, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+#define COLLECTIVE_SIGNATURE                                    \
+    void Reduce(                                                \
+        T* buf, int count, Op op,                               \
+        int root, Comm const& comm, SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                                    \
+    void Reduce(                                                        \
+        Complex<T>* buf, int count, Op op,                              \
+        int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 
-template<typename T,class OpClass,
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
 void Reduce
-( T* buf, int count, OpClass op, bool commutative, int root, Comm comm )
+( T* buf, int count, OpClass op, bool commutative, int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Reduce( buf, count, UserCommOp<T>(), root, comm );
     else
@@ -930,193 +1232,293 @@ EL_NO_RELEASE_EXCEPT
 }
 
 // Default to SUM
-template<typename T>
-void Reduce( T* buf, int count, int root, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+void Reduce( T* buf, int count, int root, Comm const& comm,
+             SyncInfo<D> const& syncInfo );
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::REDUCE
 
 // AllReduce
 // ---------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllReduce( const Real* sbuf, Real* rbuf, int count, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllReduce
-( const Complex<Real>* sbuf, Complex<Real>* rbuf, int count, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void AllReduce( const T* sbuf, T* rbuf, int count, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
 
-template<typename T,class OpClass,
-         typename=DisableIf<IsData<OpClass>>>
-void AllReduce
-( const T* sb, T* rb, int count, OpClass op, bool commutative,
-  Comm comm )
-EL_NO_RELEASE_EXCEPT
-{
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
-    if( commutative )
-        AllReduce( sb, rb, count, UserCommOp<T>(), comm );
-    else
-        AllReduce( sb, rb, count, UserOp<T>(), comm );
-}
+#define COLL Collective::ALLREDUCE
+#define COLLECTIVE_SIGNATURE                                    \
+    void AllReduce(                                             \
+        T const* sbuf, T* rbuf, int count, Op op, Comm const& comm,    \
+        SyncInfo<D> const&)
+#define COLLECTIVE_SIGNATURE_COMPLEX                                    \
+    void AllReduce(                                                     \
+        Complex<T> const* sbuf, Complex<T>* rbuf, int count, Op op,     \
+        Comm const& comm, SyncInfo<D> const&)
 
-// Default to SUM
-template<typename T>
-void AllReduce( const T* sbuf, T* rbuf, int count, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
 
-// If the message-length is one
-template<typename T>
-T AllReduce( T sb, Op op, Comm comm ) EL_NO_RELEASE_EXCEPT;
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
 
-template<typename T,class OpClass,
-         typename=DisableIf<IsData<OpClass>>>
-T AllReduce
-( T sb, OpClass op, bool commutative, Comm comm ) EL_NO_RELEASE_EXCEPT
-{
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
-    if( commutative )
-        return AllReduce( sb, UserCommOp<T>(), comm );
-    else
-        return AllReduce( sb, UserOp<T>(), comm );
-}
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
 
-// If the message-length is one (and default to SUM)
-template<typename T>
-T AllReduce( T sb, Comm comm ) EL_NO_RELEASE_EXCEPT;
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
 
-// Single-buffer AllReduce
-// -----------------------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllReduce( Real* buf, int count, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void AllReduce( Complex<Real>* buf, int count, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void AllReduce( T* buf, int count, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
 
-template<typename T,class OpClass,
-         typename=DisableIf<IsData<OpClass>>>
-void AllReduce
-( T* buf, int count, OpClass op, bool commutative, Comm comm )
-EL_NO_RELEASE_EXCEPT
-{
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
-    if( commutative )
-        AllReduce( buf, count, UserCommOp<T>(), comm );
-    else
-        AllReduce( buf, count, UserOp<T>(), comm );
-}
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
 
-// Default to SUM
-template<typename T>
-void AllReduce( T* buf, int count, Comm comm ) EL_NO_RELEASE_EXCEPT;
+//
+// The "IN_PLACE" allreduce
+//
+
+#define COLLECTIVE_SIGNATURE                            \
+    void AllReduce(T* buf, int count, Op op, Comm const& comm, \
+                   SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                             \
+    void AllReduce(Complex<T>* buf, int count, Op op, Comm const& comm, \
+                   SyncInfo<D> const& syncInfo)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+template <typename T, Device D>
+void AllReduce(const T* sbuf, T* rbuf, int count, Comm const& comm,
+               SyncInfo<D> const& syncInfo);
+
+template <typename T, Device D>
+T AllReduce(T sb, Op op, Comm const& comm, SyncInfo<D> const& syncInfo);
+
+template <typename T, Device D>
+T AllReduce(T sb, Comm const& comm, SyncInfo<D> const& syncInfo);
+
+template <typename T, Device D>
+void AllReduce(T* buf, int count, Comm const& comm, SyncInfo<D> const& syncInfo);
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::ALLREDUCE
 
 // ReduceScatter
 // -------------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void ReduceScatter( Real* sbuf, Real* rbuf, int rc, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void ReduceScatter
-( Complex<Real>* sbuf, Complex<Real>* rbuf, int rc, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void ReduceScatter( T* sbuf, T* rbuf, int rc, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+#define COLL Collective::REDUCESCATTER
+#define COLLECTIVE_SIGNATURE                                    \
+    void ReduceScatter(                                         \
+        T const* sbuf, T* rbuf, int rc, Op op, Comm const& comm,       \
+        SyncInfo<D> const& syncInfo )
+#define COLLECTIVE_SIGNATURE_COMPLEX                                    \
+    void ReduceScatter(                                                 \
+        Complex<T> const* sbuf, Complex<T>* rbuf, int rc, Op op,        \
+            Comm const& comm, SyncInfo<D> const& syncInfo )
 
-template<typename T,class OpClass,
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+
+// FIXME: WHAT TO DO HERE??
+template<typename T, Device D, class OpClass,
          typename=DisableIf<IsData<OpClass>>>
-void ReduceScatter
-( const T* sb, T* rb, int count, OpClass op, bool commutative, Comm comm )
-EL_NO_RELEASE_EXCEPT
+void ReduceScatter(
+    const T* sb, T* rb, int count, OpClass op, bool commutative, Comm const& comm,
+    SyncInfo<D> const& syncInfo)
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
-        ReduceScatter( sb, rb, count, UserCommOp<T>(), comm );
+        ReduceScatter( sb, rb, count, UserCommOp<T>(), comm, syncInfo );
     else
-        ReduceScatter( sb, rb, count, UserOp<T>(), comm );
+        ReduceScatter( sb, rb, count, UserOp<T>(), comm, syncInfo );
 }
 
 // Default to SUM
-template<typename T>
-void ReduceScatter( T* sbuf, T* rbuf, int rc, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+void ReduceScatter( T const* sbuf, T* rbuf, int rc, Comm const& comm,
+                    SyncInfo<D> const& syncInfo);
 
 // Single-buffer ReduceScatter
 // ---------------------------
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void ReduceScatter( Real* buf, int rc, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename Real,
-         typename=EnableIf<IsPacked<Real>>>
-void ReduceScatter( Complex<Real>* buf, int rc, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
-template<typename T,
-         typename=DisableIf<IsPacked<T>>,
-         typename=void>
-void ReduceScatter( T* buf, int rc, Op op, Comm comm )
-EL_NO_RELEASE_EXCEPT;
 
-template<typename T,class OpClass,
+#define COLLECTIVE_SIGNATURE                    \
+    void ReduceScatter(                         \
+        T* buf, int count, Op op, Comm const& comm,    \
+        SyncInfo<D> const& syncInfo)
+#define COLLECTIVE_SIGNATURE_COMPLEX                     \
+    void ReduceScatter(                                  \
+        Complex<T>* buf, int count, Op op, Comm const& comm,    \
+        SyncInfo<D> const& syncInfo)
+
+// Aluminum
+template <typename T, Device D,
+          typename=EnableIf<IsAluminumSupported<T,D,COLL>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, not-device-ok
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=DisableIf<IsMpiDeviceValidType<T,D>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, not-packed
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=DisableIf<IsPacked<T>>>
+COLLECTIVE_SIGNATURE;
+
+// Non-aluminum, device-ok, packed, complex
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<Complex<T>,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<Complex<T>,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE_COMPLEX;
+
+// Non-aluminum, device-ok, packed, real
+template <typename T, Device D,
+          typename=DisableIf<IsAluminumSupported<T,D,COLL>>,
+          typename=EnableIf<IsMpiDeviceValidType<T,D>>,
+          typename=EnableIf<IsPacked<T>>,
+          typename=DisableIf<IsComplex<T>>,
+          typename=void>
+COLLECTIVE_SIGNATURE;
+
+// FIXME: WHAT TO DO HERE??
+template<typename T, Device D, class OpClass,
          typename=DisableIf<IsData<OpClass>>>
-void ReduceScatter
-( T* buf, int count, OpClass op, bool commutative, Comm comm )
-EL_NO_RELEASE_EXCEPT
+void ReduceScatter(
+    T* buf, int count, OpClass op, bool commutative, Comm const& comm,
+    SyncInfo<D> const& syncInfo)
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
-        ReduceScatter( buf, count, UserCommOp<T>(), comm );
+        ReduceScatter( buf, count, UserCommOp<T>(), comm, syncInfo );
     else
-        ReduceScatter( buf, count, UserOp<T>(), comm );
+        ReduceScatter( buf, count, UserOp<T>(), comm, syncInfo );
 }
 
 // Default to SUM
-template<typename T>
-void ReduceScatter( T* buf, int rc, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+void ReduceScatter(T* buf, int rc, Comm const& comm, SyncInfo<D> const&);
+
+#undef COLLECTIVE_SIGNATURE_COMPLEX
+#undef COLLECTIVE_SIGNATURE
+#undef COLL // Collective::REDUCESCATTER
 
 // Variable-length ReduceScatter
 // -----------------------------
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void ReduceScatter
-( const Real* sbuf, Real* rbuf, const int* rcs, Op op, Comm comm )
+( const Real* sbuf, Real* rbuf, const int* rcs, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void ReduceScatter
 ( const Complex<Real>* sbuf, Complex<Real>* rbuf, const int* rcs, Op op,
-  Comm comm ) EL_NO_RELEASE_EXCEPT;
-template<typename T,
+  Comm const& comm, SyncInfo<D> const& ) EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
 void ReduceScatter
-( const T* sbuf, T* rbuf, const int* rcs, Op op, Comm comm )
+( const T* sbuf, T* rbuf, const int* rcs, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
-template<typename T,class OpClass,
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
 void ReduceScatter
 ( const T* sb, T* rb, const int* rcs, OpClass op, bool commutative,
-  Comm comm )
+  Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         ReduceScatter( sb, rb, rcs, UserCommOp<T>(), comm );
     else
@@ -1124,56 +1526,57 @@ EL_NO_RELEASE_EXCEPT
 }
 
 // Default to SUM
-template<typename T>
-void ReduceScatter( const T* sbuf, T* rbuf, const int* rcs, Comm comm )
-EL_NO_RELEASE_EXCEPT;
+template <typename T, Device D>
+void ReduceScatter(
+    const T* sbuf, T* rbuf, const int* rcs, Comm const& comm, SyncInfo<D> const& )
+    EL_NO_RELEASE_EXCEPT;
 
 // Scan
 // ----
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
-void Scan( const Real* sbuf, Real* rbuf, int count, Op op, Comm comm )
+void Scan( const Real* sbuf, Real* rbuf, int count, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
 void Scan
-( const Complex<Real>* sbuf, Complex<Real>* rbuf, int count, Op op, Comm comm )
+( const Complex<Real>* sbuf, Complex<Real>* rbuf, int count, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename T,
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
-void Scan( const T* sbuf, T* rbuf, int count, Op op, Comm comm )
+void Scan( const T* sbuf, T* rbuf, int count, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
-template<typename T,class OpClass,
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
-void Scan
-( const T* sb, T* rb, int count, OpClass op, bool commutative,
-  int root, Comm comm )
+void Scan(
+    const T* sb, T* rb, int count, OpClass op, bool commutative,
+    int root, Comm const& comm, SyncInfo<D> const& syncInfo)
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
-        Scan( sb, rb, count, UserCommOp<T>(), root, comm );
+        Scan(sb, rb, count, UserCommOp<T>(), root, comm, syncInfo);
     else
-        Scan( sb, rb, count, UserOp<T>(), root, comm );
+        Scan(sb, rb, count, UserOp<T>(), root, comm, syncInfo);
 }
 
 // Default to SUM
-template<typename T>
-void Scan( const T* sbuf, T* rbuf, int count, Comm comm )
+template <typename T, Device D>
+void Scan( const T* sbuf, T* rbuf, int count, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
 // With a message-size of one
 template<typename T>
-T Scan( T sb, Op op, Comm comm ) EL_NO_RELEASE_EXCEPT;
+T Scan( T sb, Op op, Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
-template<typename T,class OpClass,
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
-T Scan( T sb, OpClass op, bool commutative, int root, Comm comm )
+T Scan( T sb, OpClass op, bool commutative, int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         return Scan( sb, UserCommOp<T>(), root, comm );
     else
@@ -1182,31 +1585,31 @@ EL_NO_RELEASE_EXCEPT
 
 // With a message-size of one and default to SUM
 template<typename T>
-T Scan( T sb, Comm comm ) EL_NO_RELEASE_EXCEPT;
+T Scan( T sb, Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
 // Single-buffer scan
 // ------------------
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
-void Scan( Real* buf, int count, Op op, Comm comm )
+void Scan( Real* buf, int count, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename Real,
+template <typename Real, Device D,
          typename=EnableIf<IsPacked<Real>>>
-void Scan( Complex<Real>* buf, int count, Op op, Comm comm )
+void Scan( Complex<Real>* buf, int count, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
-template<typename T,
+template <typename T, Device D,
          typename=DisableIf<IsPacked<T>>,
          typename=void>
-void Scan( T* buf, int count, Op op, Comm comm )
+void Scan( T* buf, int count, Op op, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT;
 
-template<typename T,class OpClass,
+template <typename T, Device D,class OpClass,
          typename=DisableIf<IsData<OpClass>>>
 void Scan
-( T* buf, int count, OpClass op, bool commutative, int root, Comm comm )
+( T* buf, int count, OpClass op, bool commutative, int root, Comm const& comm, SyncInfo<D> const& )
 EL_NO_RELEASE_EXCEPT
 {
-    SetUserReduceFunc( function<T(const T&,const T&)>(op), commutative );
+    SetUserReduceFunc( std::function<T(const T&,const T&)>(op), commutative );
     if( commutative )
         Scan( buf, count, UserCommOp<T>(), root, comm );
     else
@@ -1214,27 +1617,28 @@ EL_NO_RELEASE_EXCEPT
 }
 
 // Default to SUM
-template<typename T>
-void Scan( T* buf, int count, Comm comm ) EL_NO_RELEASE_EXCEPT;
+template<typename T, Device D>
+void Scan(T* buf, int count, Comm const& comm, SyncInfo<D> const&)
+    EL_NO_RELEASE_EXCEPT;
 
 template<typename T>
 void SparseAllToAll
-( const vector<T>& sendBuffer,
-  const vector<int>& sendCounts,
-  const vector<int>& sendOffs,
-        vector<T>& recvBuffer,
-  const vector<int>& recvCounts,
-  const vector<int>& recvOffs,
-        Comm comm ) EL_NO_RELEASE_EXCEPT;
+( const std::vector<T>& sendBuffer,
+  const std::vector<int>& sendCounts,
+  const std::vector<int>& sendOffs,
+        std::vector<T>& recvBuffer,
+  const std::vector<int>& recvCounts,
+  const std::vector<int>& recvOffs,
+        Comm const& comm ) EL_NO_RELEASE_EXCEPT;
 
 void VerifySendsAndRecvs
-( const vector<int>& sendCounts,
-  const vector<int>& recvCounts, Comm comm );
+( const std::vector<int>& sendCounts,
+  const std::vector<int>& recvCounts, Comm const& comm );
 
 void CreateCustom() EL_NO_RELEASE_EXCEPT;
 void DestroyCustom() EL_NO_RELEASE_EXCEPT;
 
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 void CreateBigIntFamily();
 void DestroyBigIntFamily();
 void CreateBigFloatFamily();
@@ -1242,8 +1646,6 @@ void DestroyBigFloatFamily();
 #endif
 
 // Convenience functions which might not be very useful
-int Comm::Rank() const EL_NO_RELEASE_EXCEPT { return mpi::Rank(*this); }
-int Comm::Size() const EL_NO_RELEASE_EXCEPT { return mpi::Size(*this); }
 int Group::Rank() const EL_NO_RELEASE_EXCEPT { return mpi::Rank(*this); }
 int Group::Size() const EL_NO_RELEASE_EXCEPT { return mpi::Size(*this); }
 

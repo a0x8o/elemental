@@ -26,43 +26,226 @@ template<typename T>
 void Exchange
 ( const ElementalMatrix<T>& A,
         ElementalMatrix<T>& B,
-  int sendRank, int recvRank, mpi::Comm comm );
+  int sendRank, int recvRank, mpi::Comm const& comm );
 
-template<typename T,Dist U,Dist V>
-void Translate( const DistMatrix<T,U,V>& A, DistMatrix<T,U,V>& B );
+template<typename T,Dist U,Dist V,Device D1, Device D2>
+void Translate( DistMatrix<T,U,V,ELEMENT,D1> const& A,
+                DistMatrix<T,U,V,ELEMENT,D2>& B );
 template<typename T,Dist U,Dist V>
 void Translate
 ( const DistMatrix<T,U,V,BLOCK>& A, DistMatrix<T,U,V,BLOCK>& B );
 
-template<typename T>
+template<typename T,Device D>
 void TranslateBetweenGrids
-( const DistMatrix<T,MC,MR>& A, DistMatrix<T,MC,MR>& B );
-template<typename T>
+( const DistMatrix<T,CIRC,CIRC,ELEMENT,D>& A, DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B );
+template<typename T,Device D>
 void TranslateBetweenGrids
-( const DistMatrix<T,STAR,STAR>& A, DistMatrix<T,STAR,STAR>& B );
+( const DistMatrix<T,MC,MR,ELEMENT,D>& A, DistMatrix<T,MC,MR,ELEMENT,D>& B );
+template<typename T,Device D>
+void TranslateBetweenGrids
+( const DistMatrix<T,STAR,VC,ELEMENT,D>& A, DistMatrix<T,STAR,VC,ELEMENT,D>& B );
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsBroadcastBasic
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsBroadcast
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int version=0);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsBroadcast
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, mpi::Comm const& broadcastComm, SyncInfo<D1> & syncGeneral, int version=0);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsBroadcastOptComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector,  mpi::Comm const& broadcastComm, SyncInfo<D1> & syncGeneral);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAllreduce
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, mpi::Comm const& allreduceComm, SyncInfo<D1> & syncGeneral, int version=0);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAllreduce
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int version=0);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAllreduceBasic
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAllreduceOpt
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAllreduceOptComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, mpi::Comm const& allreduceComm, SyncInfo<D1> & syncGeneral);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsScatterOptComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsScatterComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsSliceGatherOptComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
+template<typename T, Device D1, Device D2>
+
+void TranslateBetweenGridsScatterCommParentSmall
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral);
+
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsSliceGatherParentSmall
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsScatterCommSameSizeSubGrids
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsSliceBroadcastCommSameSizeSubGrids
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral);
+
+
+
+template<typename T, Device D1, Device D2>
+
+void TranslateBetweenGridsScatter
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& ScatterComm, SyncInfo<D1> & syncGeneral, int version=0);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsGatherOptComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsGatherComm
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsGatherCommSameSizeSubGrids
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAllGatherCommSameSizeSubGrids
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsGather
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector, int splitDim,  mpi::Comm const& gatherComm, SyncInfo<D1> & syncGeneral, int version=0);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsSliceColVector
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector);
+
+template<typename T>
+void TranslateBetweenGridsSliceCol
+(AbstractDistMatrix<T> const& A,
+  AbstractDistMatrix<T> & B);
+
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsAsync
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  DistMatrix<T,STAR,VC,ELEMENT,D2>& B);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenGridsSliceConcatAlongFirstDim
+(DistMatrix<T,STAR,VC,ELEMENT,D1> const& A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector,
+  int splitDim,
+  mpi::Comm const& gatherComm,
+  SyncInfo<D1> & syncGeneral);
+
+template<typename T, Device D1, Device D2>
+void TranslateBetweenConatSliceFirstChannel
+(DistMatrix<T,STAR,VC,ELEMENT,D1> & A,
+  std::vector<std::unique_ptr<AbstractDistMatrix<T>>>& B_Vector,
+  int splitDim,
+  mpi::Comm const& gatherComm,
+  SyncInfo<D1> & syncGeneral);
+
 // The fallback case that simply throws an exception
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D1,Device D2>
 void TranslateBetweenGrids
-( const DistMatrix<T,U,V>& A, DistMatrix<T,U,V>& B );
+( const DistMatrix<T,U,V,ELEMENT,D1>& A,
+  DistMatrix<T,U,V,ELEMENT,D2>& B );
 
 // NOTE: Only instantiated for (U,V)=(MC,MR) and (U,V)=(MR,MC)
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void ColwiseVectorExchange
-( const DistMatrix<T,ProductDist<U,V>(),STAR>& A,
-        DistMatrix<T,ProductDist<V,U>(),STAR>& B );
-template<typename T,Dist U,Dist V>
+( DistMatrix<T,ProductDist<U,V>(),STAR,ELEMENT,D> const& A,
+  DistMatrix<T,ProductDist<V,U>(),STAR,ELEMENT,D>& B );
+template<typename T,Dist U,Dist V,Device D>
 void RowwiseVectorExchange
-( const DistMatrix<T,STAR,ProductDist<U,V>()>& A,
-        DistMatrix<T,STAR,ProductDist<V,U>()>& B );
+( DistMatrix<T,STAR,ProductDist<U,V>(),ELEMENT,D> const& A,
+  DistMatrix<T,STAR,ProductDist<V,U>(),ELEMENT,D>& B );
 
 // NOTE: Only instantiated for (U,V)=(MC,MR) and (U,V)=(MR,MC)
-template<typename T,Dist U,Dist V>
-void TransposeDist( const DistMatrix<T,U,V>& A, DistMatrix<T,V,U>& B );
+template<typename T,Dist U,Dist V,
+         typename=EnableIf<IsStorageType<T,Device::CPU>>>
+void TransposeDist( DistMatrix<T,U,V,ELEMENT,Device::CPU> const& A,
+                    DistMatrix<T,V,U,ELEMENT,Device::CPU>& B );
 
-template<typename T,Dist U,Dist V>
+#ifdef HYDROGEN_HAVE_GPU
+template<typename T,Dist U,Dist V,
+         typename=EnableIf<IsStorageType<T,Device::GPU>>>
+void TransposeDist( DistMatrix<T,U,V,ELEMENT,Device::GPU> const& A,
+                    DistMatrix<T,V,U,ELEMENT,Device::GPU>& B );
+#endif // HYDROGEN_HAVE_GPU
+
+template<typename T,Dist U,Dist V,Device D,
+         typename=DisableIf<IsStorageType<T,D>>,typename=void>
+void TransposeDist( DistMatrix<T,U,V,ELEMENT,D> const& A,
+                    DistMatrix<T,V,U,ELEMENT,D>& B );
+
+template<typename T,Dist U,Dist V,Device D,
+         typename=EnableIf<IsStorageType<T,D>>>
 void Filter
-( const DistMatrix<T,Collect<U>(),Collect<V>()>& A,
-        DistMatrix<T,        U,           V   >& B );
+( DistMatrix<T,Collect<U>(),Collect<V>(),ELEMENT,D> const& A,
+  DistMatrix<T,U,V,ELEMENT,D>& B );
+template<typename T,Dist U,Dist V,Device D,
+         typename=DisableIf<IsStorageType<T,D>>,typename=void>
+void Filter
+( DistMatrix<T,Collect<U>(),Collect<V>(),ELEMENT,D> const& A,
+  DistMatrix<T,U,V,ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void Filter
 ( const DistMatrix<T,Collect<U>(),Collect<V>(),BLOCK>& A,
@@ -104,10 +287,10 @@ template<typename T>
 void PartialRowFilter
 ( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void AllGather
-( const DistMatrix<T,        U,           V   >& A,
-        DistMatrix<T,Collect<U>(),Collect<V>()>& B );
+( DistMatrix<T,        U,           V   ,ELEMENT,D> const& A,
+  DistMatrix<T,Collect<U>(),Collect<V>(),ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void AllGather
 ( const DistMatrix<T,        U,           V   ,BLOCK>& A,
@@ -129,10 +312,10 @@ template<typename T>
 void RowAllGather
 ( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void PartialColAllGather
-( const DistMatrix<T,        U,   V>& A,
-        DistMatrix<T,Partial<U>(),V>& B );
+( DistMatrix<T,        U,   V,ELEMENT,D> const& A,
+  DistMatrix<T,Partial<U>(),V,ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void PartialColAllGather
 ( const DistMatrix<T,        U,   V,BLOCK>& A,
@@ -146,64 +329,64 @@ template<typename T>
 void PartialRowAllGather
 ( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void ColAllToAllDemote
-( const DistMatrix<T,Partial<U>(),PartialUnionRow<U,V>()>& A,
-        DistMatrix<T,        U,                     V   >& B );
+( DistMatrix<T,Partial<U>(),PartialUnionRow<U,V>(),ELEMENT,D> const& A,
+  DistMatrix<T,        U,                     V   ,ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void ColAllToAllDemote
 ( const DistMatrix<T,Partial<U>(),PartialUnionRow<U,V>(),BLOCK>& A,
         DistMatrix<T,        U,                     V   ,BLOCK>& B );
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void RowAllToAllDemote
-( const DistMatrix<T,PartialUnionCol<U,V>(),Partial<V>()>& A,
-        DistMatrix<T,                U,             V   >& B );
+( DistMatrix<T,PartialUnionCol<U,V>(),Partial<V>(),ELEMENT,D> const& A,
+  DistMatrix<T,U,V,ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void RowAllToAllDemote
 ( const DistMatrix<T,PartialUnionCol<U,V>(),Partial<V>(),BLOCK>& A,
         DistMatrix<T,                U,             V   ,BLOCK>& B );
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void ColAllToAllPromote
-( const DistMatrix<T,        U,                     V   >& A,
-        DistMatrix<T,Partial<U>(),PartialUnionRow<U,V>()>& B );
+( DistMatrix<T,U,V,ELEMENT,D> const& A,
+  DistMatrix<T,Partial<U>(),PartialUnionRow<U,V>(),ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void ColAllToAllPromote
 ( const DistMatrix<T,        U,                     V   ,BLOCK>& A,
         DistMatrix<T,Partial<U>(),PartialUnionRow<U,V>(),BLOCK>& B );
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void RowAllToAllPromote
-( const DistMatrix<T,                U,             V   >& A,
-        DistMatrix<T,PartialUnionCol<U,V>(),Partial<V>()>& B );
+( DistMatrix<T,U,V,ELEMENT,D> const& A,
+  DistMatrix<T,PartialUnionCol<U,V>(),Partial<V>(),ELEMENT,D>& B );
 template<typename T,Dist U,Dist V>
 void RowAllToAllPromote
 ( const DistMatrix<T,                U,             V   ,BLOCK>& A,
         DistMatrix<T,PartialUnionCol<U,V>(),Partial<V>(),BLOCK>& B );
 
-template<typename T>
+template<typename T, Device D>
 void Gather
-( const ElementalMatrix<T>& A,
-        DistMatrix<T,CIRC,CIRC>& B );
+( ElementalMatrix<T> const& A,
+  DistMatrix<T,CIRC,CIRC,ELEMENT,D>& B );
 template<typename T>
 void Gather
 ( const BlockMatrix<T>& A,
         DistMatrix<T,CIRC,CIRC,BLOCK>& B );
 
-template<typename T>
+template<typename T,Device D>
 void Scatter
-( const DistMatrix<T,CIRC,CIRC>& A,
+( const DistMatrix<T,CIRC,CIRC,ELEMENT,D>& A,
         ElementalMatrix<T>& B );
 template<typename T>
 void Scatter
 ( const DistMatrix<T,CIRC,CIRC,BLOCK>& A,
         BlockMatrix<T>& B );
 
-template<typename T>
+template<typename T,Device D>
 void Scatter
-( const DistMatrix<T,CIRC,CIRC>& A,
-        DistMatrix<T,STAR,STAR>& B );
+( const DistMatrix<T,CIRC,CIRC,ELEMENT,D>& A,
+        DistMatrix<T,STAR,STAR,ELEMENT,D>& B );
 template<typename T>
 void Scatter
 ( const DistMatrix<T,CIRC,CIRC,BLOCK>& A,

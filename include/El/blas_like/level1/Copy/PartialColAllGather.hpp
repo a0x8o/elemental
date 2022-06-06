@@ -12,10 +12,10 @@
 namespace El {
 namespace copy {
 
-template<typename T,Dist U,Dist V>
+template<typename T,Dist U,Dist V,Device D>
 void PartialColAllGather
-( const DistMatrix<T,        U,   V>& A,
-        DistMatrix<T,Partial<U>(),V>& B )
+( DistMatrix<T,U,V,ELEMENT,D> const& A,
+  DistMatrix<T,Partial<U>(),V,ELEMENT,D>& B )
 {
     EL_DEBUG_CSE
     AssertSameGrids( A, B );
@@ -57,6 +57,10 @@ void PartialColAllGather
     const Int maxLocalHeight = MaxLength(height,A.ColStride());
     const Int portionSize = mpi::Pad( maxLocalHeight*width );
 
+    auto syncInfoA = SyncInfoFromMatrix(A.LockedMatrix()),
+        syncInfoB = SyncInfoFromMatrix(B.LockedMatrix());
+    auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
+
     if( colDiff == 0 )
     {
         if( A.PartialUnionColStride() == 1 )
@@ -65,30 +69,30 @@ void PartialColAllGather
         }
         else
         {
-            vector<T> buffer;
-            FastResize( buffer, (colStrideUnion+1)*portionSize );
-            T* firstBuf = &buffer[0];
-            T* secondBuf = &buffer[portionSize];
+            simple_buffer<T,D> buffer(
+                (colStrideUnion+1)*portionSize, syncInfoB);
+            T* firstBuf = buffer.data();
+            T* secondBuf = buffer.data() + portionSize;
 
             // Pack
-            util::InterleaveMatrix
-            ( A.LocalHeight(), width,
-              A.LockedBuffer(), 1, A.LDim(),
-              firstBuf,         1, A.LocalHeight() );
+            util::InterleaveMatrix(
+                A.LocalHeight(), width,
+                A.LockedBuffer(), 1, A.LDim(),
+                firstBuf,         1, A.LocalHeight(), syncInfoB);
 
             // Communicate
-            mpi::AllGather
-            ( firstBuf, portionSize, secondBuf, portionSize,
-              A.PartialUnionColComm() );
+            mpi::AllGather(
+                firstBuf, portionSize, secondBuf, portionSize,
+                A.PartialUnionColComm(), syncInfoB);
 
             // Unpack
-            util::PartialColStridedUnpack
-            ( height, width,
-              A.ColAlign(), A.ColStride(),
-              colStrideUnion, colStridePart, A.PartialColRank(),
-              B.ColShift(),
-              secondBuf, portionSize,
-              B.Buffer(), B.LDim() );
+            util::PartialColStridedUnpack(
+                height, width,
+                A.ColAlign(), A.ColStride(),
+                colStrideUnion, colStridePart, A.PartialColRank(),
+                B.ColShift(),
+                secondBuf, portionSize,
+                B.Buffer(), B.LDim(), syncInfoB);
         }
     }
     else
@@ -97,35 +101,36 @@ void PartialColAllGather
         if( A.Grid().Rank() == 0 )
             cerr << "Unaligned PartialColAllGather" << endl;
 #endif
-        vector<T> buffer;
-        FastResize( buffer, (colStrideUnion+1)*portionSize );
-        T* firstBuf = &buffer[0];
-        T* secondBuf = &buffer[portionSize];
+        simple_buffer<T,D> buffer((colStrideUnion+1)*portionSize, syncInfoB);
+        T* firstBuf = buffer.data();
+        T* secondBuf = buffer.data() + portionSize;
 
         // Perform a SendRecv to match the row alignments
-        util::InterleaveMatrix
-        ( A.LocalHeight(), width,
-          A.LockedBuffer(), 1, A.LDim(),
-          secondBuf,        1, A.LocalHeight() );
+        util::InterleaveMatrix(
+            A.LocalHeight(), width,
+            A.LockedBuffer(), 1, A.LDim(),
+            secondBuf,        1, A.LocalHeight(), syncInfoB);
         const Int sendColRank = Mod( A.ColRank()+colDiff, A.ColStride() );
         const Int recvColRank = Mod( A.ColRank()-colDiff, A.ColStride() );
-        mpi::SendRecv
-        ( secondBuf, portionSize, sendColRank,
-          firstBuf,  portionSize, recvColRank, A.ColComm() );
+
+        mpi::SendRecv(
+            secondBuf, portionSize, sendColRank,
+            firstBuf,  portionSize, recvColRank, A.ColComm(),
+            syncInfoB);
 
         // Use the SendRecv as an input to the partial union AllGather
-        mpi::AllGather
-        ( firstBuf,  portionSize,
-          secondBuf, portionSize, A.PartialUnionColComm() );
+        mpi::AllGather(
+            firstBuf,  portionSize,
+            secondBuf, portionSize, A.PartialUnionColComm(), syncInfoB);
 
         // Unpack
-        util::PartialColStridedUnpack
-        ( height, width,
-          A.ColAlign()+colDiff, A.ColStride(),
-          colStrideUnion, colStridePart, A.PartialColRank(),
-          B.ColShift(),
-          secondBuf, portionSize,
-          B.Buffer(), B.LDim() );
+        util::PartialColStridedUnpack(
+            height, width,
+            A.ColAlign()+colDiff, A.ColStride(),
+            colStrideUnion, colStridePart, A.PartialColRank(),
+            B.ColShift(),
+            secondBuf, portionSize,
+            B.Buffer(), B.LDim(), syncInfoB);
     }
 }
 

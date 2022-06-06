@@ -29,7 +29,7 @@ T PowerLawVariable( T x, Base<T> alpha )
             u += Real(1);
     }
     u = Max(Min(u, Real(1)), Real(0));
-      
+
     // Generate random number from power-law distribution
     int iters = int(Pow((Real(1)-u), -Real(1)/(alpha -Real(1))));
 
@@ -96,7 +96,7 @@ int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
@@ -116,12 +116,12 @@ main( int argc, char* argv[] )
         if( gridHeight == 0 )
             gridHeight = Grid::DefaultHeight( mpi::Size(comm) );
         const GridOrder order = ( colMajor ? COLUMN_MAJOR : ROW_MAJOR );
-        const Grid g( comm, gridHeight, order );
+        const Grid g(std::move(comm), gridHeight, order );
         SetBlocksize( nb );
         ComplainIfDebug();
 
         // Message
-        OutputFromRoot(comm,"Testing EntrywiseMap");
+        OutputFromRoot(g.Comm(),"Testing EntrywiseMap");
 
         // Choose function
         std::function<float(const float&)> funcFloat;

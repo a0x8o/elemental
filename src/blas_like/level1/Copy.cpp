@@ -1,130 +1,113 @@
-/*
-   Copyright (c) 2009-2016, Jack Poulson
-   All rights reserved.
+#include "El/core.hpp"
+#include "El/blas_like/level1/Copy.hpp"
 
-   This file is part of Elemental and is under the BSD 2-Clause License,
-   which can be found in the LICENSE file in the root directory, or at
-   http://opensource.org/licenses/BSD-2-Clause
-*/
-#include <El-lite.hpp>
-#include <El/blas_like/level1.hpp>
+static_assert(std::is_integral<El::Int>::value,
+              "El::Int should be integral!");
 
-namespace El {
-
-void Copy( const Graph& A, Graph& B )
+namespace El
 {
-    EL_DEBUG_CSE
-    const Int numSources = A.NumSources();
-    const Int numTargets = A.NumTargets();
+namespace
+{
 
-    B.Resize( numSources, numTargets );
-    // Directly assign instead of queueing up the individual edges
-    B.sources_ = A.sources_;
-    B.targets_ = A.targets_;
-    B.consistent_ = A.consistent_;
-    B.sourceOffsets_ = A.sourceOffsets_;
-    B.ProcessQueues();
+// For now, I just want to generate the tensor-product of
+// {MatrixTypes}^2 for Copy. This will cover most of the usecases in
+// LBANN. AFAIK, the integer matrices are always converted to a
+// floating-point type before they interact "virtually"; all
+// operations on those matrices are dispatched statically.
+
+using MatrixTypes = TypeList<
+    float, double, Complex<float>, Complex<double>
+#ifdef HYDROGEN_HAVE_HALF
+    , cpu_half_type
+#endif // HYDROGEN_HAVE_HALF
+#ifdef HYDROGEN_GPU_USE_FP16
+    , gpu_half_type
+#endif // HYDROGEN_GPU_USE_FP16
+    >;
+
+template <template <typename> class X, typename... Ts>
+using Expand = TypeList<X<Ts>...>;
+
+template <template <typename> class X, typename List>
+struct ExpandTLT {};
+
+template <template <typename> class X, typename... Ts>
+struct ExpandTLT<X, TypeList<Ts...>>
+{
+    using type = Expand<X, Ts...>;
+};
+
+template <template <typename> class X, typename List>
+using ExpandTL = typename ExpandTLT<X, List>::type;
+
+// This is replaced by a generic multiple dispatch engine in
+// DiHydrogen; this is a one-off use-case for now, so there's no need
+// to backport a robust implementation.
+template <typename FunctorT, typename LHSList, typename RHSList>
+struct CopyDispatcher
+{
+    static void Do(FunctorT f,
+                   BaseDistMatrix const& src, BaseDistMatrix& tgt)
+    {
+        using LHead = Head<LHSList>;
+        using LTail = Tail<LHSList>;
+        if (auto const* ptr = dynamic_cast<LHead const*>(&src))
+            return CopyDispatcher<FunctorT, LHSList, RHSList>::DoRHS(
+                f, *ptr, tgt);
+        else
+            return CopyDispatcher<FunctorT, LTail, RHSList>::Do(f, src, tgt);
+    }
+
+    template <typename LHSType>
+    static void DoRHS(FunctorT f, LHSType const& src, BaseDistMatrix& tgt)
+    {
+        using RHead = Head<RHSList>;
+        using RTail = Tail<RHSList>;
+        if (auto* ptr = dynamic_cast<RHead*>(&tgt))
+            return f(src, *ptr);
+        else
+            return CopyDispatcher<FunctorT, LHSList, RTail>::DoRHS(f, src, tgt);
+    }
+};// struct CopyDispatcher
+
+template <typename FunctorT, typename RHSList>
+struct CopyDispatcher<FunctorT, TypeList<>, RHSList>
+{
+    static void Do(FunctorT const&,
+                   BaseDistMatrix const&, BaseDistMatrix const&)
+    {
+        LogicError("Source matrix type not found.");
+    }
+};
+
+template <typename FunctorT, typename LHSList>
+struct CopyDispatcher<FunctorT, LHSList, TypeList<>>
+{
+    static void DoRHS(FunctorT const&,
+                      BaseDistMatrix const&, BaseDistMatrix const&)
+    {
+        LogicError("Target matrix type not found.");
+    }
+};
+
+}// namespace <anon>
+
+void Copy(BaseDistMatrix const& Source, BaseDistMatrix& Target)
+{
+    using FunctorT = details::CopyFunctor;
+    using MatrixTs = ExpandTL<AbstractDistMatrix, MatrixTypes>;
+    using Dispatcher = CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
+    FunctorT f;
+    return Dispatcher::Do(f, Source, Target);
 }
 
-void Copy( const Graph& A, DistGraph& B )
+void CopyAsync(BaseDistMatrix const& Source, BaseDistMatrix& Target)
 {
-    EL_DEBUG_CSE
-    const Int numSources = A.NumSources();
-    const Int numTargets = A.NumTargets();
-
-    B.SetGrid( Grid::Trivial() );
-    B.Resize( numSources, numTargets );
-    // Directly assign instead of queueing up the individual edges
-    B.sources_ = A.sources_;
-    B.targets_ = A.targets_;
-    B.locallyConsistent_ = A.consistent_;
-    B.localSourceOffsets_ = A.sourceOffsets_;
-    B.ProcessLocalQueues();
+    using FunctorT = details::CopyAsyncFunctor;
+    using MatrixTs = ExpandTL<AbstractDistMatrix, MatrixTypes>;
+    using Dispatcher = CopyDispatcher<FunctorT, MatrixTs, MatrixTs>;
+    FunctorT f;
+    return Dispatcher::Do(f, Source, Target);
 }
 
-void Copy( const DistGraph& A, Graph& B )
-{
-    EL_DEBUG_CSE
-    const Int numSources = A.NumSources();
-    const Int numTargets = A.NumTargets();
-    if( A.Grid().Size() != 1 )
-        LogicError("Cannot yet construct sequential graph from distributed");
-
-    B.Resize( numSources, numTargets );
-    // Directly assign instead of queueing up the individual edges
-    B.sources_ = A.sources_;
-    B.targets_ = A.targets_;
-    B.consistent_ = A.locallyConsistent_;
-    B.sourceOffsets_ = A.localSourceOffsets_;
-    B.ProcessQueues();
-}
-
-void Copy( const DistGraph& A, DistGraph& B )
-{
-    EL_DEBUG_CSE
-    const Int numSources = A.NumSources();
-    const Int numTargets = A.NumTargets();
-
-    B.SetGrid( A.Grid() );
-    B.Resize( numSources, numTargets );
-    // Directly assign instead of queueing up the individual edges
-    B.sources_ = A.sources_;
-    B.targets_ = A.targets_;
-    B.multMeta = A.multMeta;
-    B.locallyConsistent_ = A.locallyConsistent_;
-    B.localSourceOffsets_ = A.localSourceOffsets_;
-    B.ProcessLocalQueues();
-}
-
-void CopyFromRoot( const DistGraph& distGraph, Graph& graph )
-{
-    EL_DEBUG_CSE
-    const Grid& grid = distGraph.Grid();
-    const int commSize = grid.Size();
-    const int commRank = grid.Rank();
-
-    const int numLocalEdges = distGraph.NumLocalEdges();
-    vector<int> edgeSizes(commSize);
-    mpi::AllGather( &numLocalEdges, 1, edgeSizes.data(), 1, grid.Comm() );
-    vector<int> edgeOffsets;
-    const int numEdges = Scan( edgeSizes, edgeOffsets );
-
-    graph.Resize( distGraph.NumSources(), distGraph.NumTargets() );
-    graph.Reserve( numEdges );
-    graph.sources_.resize( numEdges );
-    graph.targets_.resize( numEdges );
-    mpi::Gather
-    ( distGraph.LockedSourceBuffer(), numLocalEdges,
-      graph.SourceBuffer(), edgeSizes.data(), edgeOffsets.data(),
-      commRank, grid.Comm() );
-    mpi::Gather
-    ( distGraph.LockedTargetBuffer(), numLocalEdges,
-      graph.TargetBuffer(), edgeSizes.data(), edgeOffsets.data(),
-      commRank, grid.Comm() );
-    graph.ProcessQueues();
-}
-
-void CopyFromNonRoot( const DistGraph& distGraph, int root )
-{
-    EL_DEBUG_CSE
-    const Grid& grid = distGraph.Grid();
-    const int commSize = grid.Size();
-    const int commRank = grid.Rank();
-    if( commRank == root )
-        LogicError("Root called CopyFromNonRoot");
-
-    const int numLocalEdges = distGraph.NumLocalEdges();
-    vector<int> edgeSizes(commSize);
-    mpi::AllGather( &numLocalEdges, 1, edgeSizes.data(), 1, grid.Comm() );
-    vector<int> edgeOffsets;
-    Scan( edgeSizes, edgeOffsets );
-
-    mpi::Gather
-    ( distGraph.LockedSourceBuffer(), numLocalEdges,
-      (Int*)0, edgeSizes.data(), edgeOffsets.data(), root, grid.Comm() );
-    mpi::Gather
-    ( distGraph.LockedTargetBuffer(), numLocalEdges,
-      (Int*)0, edgeSizes.data(), edgeOffsets.data(), root, grid.Comm() );
-}
-
-} // namespace El
+}// namespace El

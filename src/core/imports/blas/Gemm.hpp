@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -56,22 +56,22 @@ void Gemm
 {
     // NOTE: Temporaries are avoided since constructing a BigInt/BigFloat
     //       involves a memory allocation
-    if( m > 0 && n > 0 && k == 0 && beta == T(0) )
+    if( m > 0 && n > 0 && k == 0 && beta == TypeTraits<T>::Zero() )
     {
         for( BlasInt j=0; j<n; ++j )
             for( BlasInt i=0; i<m; ++i )
-                C[i+j*CLDim] = 0;
+                C[i+j*CLDim] = TypeTraits<T>::Zero();
         return;
     }
 
     // Scale C
-    if( beta == T(0) )
+    if( beta == TypeTraits<T>::Zero() )
     {
         for( BlasInt j=0; j<n; ++j )
             for( BlasInt i=0; i<m; ++i )
-                C[i+j*CLDim] = 0;
+                C[i+j*CLDim] = TypeTraits<T>::Zero();
     }
-    else if( beta != T(1) )
+    else if( beta != TypeTraits<T>::One() )
     {
         for( BlasInt j=0; j<n; ++j )
             for( BlasInt i=0; i<m; ++i )
@@ -146,7 +146,7 @@ void Gemm
             {
                 for( BlasInt i=0; i<m; ++i )
                 {
-                    gamma = 0;
+                    gamma = TypeTraits<T>::Zero();
                     for( BlasInt l=0; l<k; ++l )
                     {
                         delta = A[l+i*ALDim];
@@ -165,7 +165,7 @@ void Gemm
             {
                 for( BlasInt i=0; i<m; ++i )
                 {
-                    gamma = 0;
+                    gamma = TypeTraits<T>::Zero();
                     for( BlasInt l=0; l<k; ++l )
                     {
                         Conj( A[l+i*ALDim], delta );
@@ -187,7 +187,7 @@ void Gemm
             {
                 for( BlasInt i=0; i<m; ++i )
                 {
-                    gamma = 0;
+                    gamma = TypeTraits<T>::Zero();
                     for( BlasInt l=0; l<k; ++l )
                     {
                         delta = A[l+i*ALDim];
@@ -206,7 +206,7 @@ void Gemm
             {
                 for( BlasInt i=0; i<m; ++i )
                 {
-                    gamma = 0;
+                    gamma = TypeTraits<T>::Zero();
                     for( BlasInt l=0; l<k; ++l )
                     {
                         Conj( B[j+l*BLDim], delta );
@@ -225,7 +225,7 @@ void Gemm
             {
                 for( BlasInt i=0; i<m; ++i )
                 {
-                    gamma = 0;
+                    gamma = TypeTraits<T>::Zero();
                     for( BlasInt l=0; l<k; ++l )
                     {
                         Conj( A[l+i*ALDim], delta );
@@ -245,10 +245,10 @@ void Gemm
             {
                 for( BlasInt i=0; i<m; ++i )
                 {
-                    gamma = 0;
+                    gamma = TypeTraits<T>::Zero();
                     for( BlasInt l=0; l<k; ++l )
                     {
-                        Conj( A[l+i*ALDim], delta );       
+                        Conj( A[l+i*ALDim], delta );
                         Conj( B[j+l*BLDim], phi );
                         delta *= phi;
                         gamma += delta;
@@ -262,16 +262,16 @@ void Gemm
 }
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const Int& alpha,
   const Int* A, BlasInt ALDim,
   const Int* B, BlasInt BLDim,
   const Int& beta,
         Int* C, BlasInt CLDim );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const DoubleDouble& alpha,
   const DoubleDouble* A, BlasInt ALDim,
   const DoubleDouble* B, BlasInt BLDim,
@@ -279,7 +279,7 @@ template void Gemm
         DoubleDouble* C, BlasInt CLDim );
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const QuadDouble& alpha,
   const QuadDouble* A, BlasInt ALDim,
   const QuadDouble* B, BlasInt BLDim,
@@ -287,7 +287,7 @@ template void Gemm
         QuadDouble* C, BlasInt CLDim );
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const Complex<DoubleDouble>& alpha,
   const Complex<DoubleDouble>* A, BlasInt ALDim,
   const Complex<DoubleDouble>* B, BlasInt BLDim,
@@ -295,17 +295,17 @@ template void Gemm
         Complex<DoubleDouble>* C, BlasInt CLDim );
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const Complex<QuadDouble>& alpha,
   const Complex<QuadDouble>* A, BlasInt ALDim,
   const Complex<QuadDouble>* B, BlasInt BLDim,
   const Complex<QuadDouble>& beta,
         Complex<QuadDouble>* C, BlasInt CLDim );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const Quad& alpha,
   const Quad* A, BlasInt ALDim,
   const Quad* B, BlasInt BLDim,
@@ -313,17 +313,36 @@ template void Gemm
         Quad* C, BlasInt CLDim );
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const Complex<Quad>& alpha,
-  const Complex<Quad>* A, BlasInt ALDim, 
+  const Complex<Quad>* A, BlasInt ALDim,
   const Complex<Quad>* B, BlasInt BLDim,
   const Complex<Quad>& beta,
         Complex<Quad>* C, BlasInt CLDim );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_HALF
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
+  const cpu_half_type& alpha,
+  const cpu_half_type* A, BlasInt ALDim,
+  const cpu_half_type* B, BlasInt BLDim,
+  const cpu_half_type& beta,
+        cpu_half_type* C, BlasInt CLDim );
+#endif
+#ifdef HYDROGEN_GPU_USE_FP16
+template void Gemm(char transA, char transB,
+                   BlasInt m, BlasInt n, BlasInt k,
+                   const gpu_half_type& alpha,
+                   const gpu_half_type* A, BlasInt ALDim,
+                   const gpu_half_type* B, BlasInt BLDim,
+                   const gpu_half_type& beta,
+                   gpu_half_type* C, BlasInt CLDim);
+#endif
+#ifdef HYDROGEN_HAVE_MPC
+template void Gemm
+( char transA, char transB,
+  BlasInt m, BlasInt n, BlasInt k,
   const BigInt& alpha,
   const BigInt* A, BlasInt ALDim,
   const BigInt* B, BlasInt BLDim,
@@ -331,7 +350,7 @@ template void Gemm
         BigInt* C, BlasInt CLDim );
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const BigFloat& alpha,
   const BigFloat* A, BlasInt ALDim,
   const BigFloat* B, BlasInt BLDim,
@@ -339,7 +358,7 @@ template void Gemm
         BigFloat* C, BlasInt CLDim );
 template void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const Complex<BigFloat>& alpha,
   const Complex<BigFloat>* A, BlasInt ALDim,
   const Complex<BigFloat>* B, BlasInt BLDim,
@@ -349,7 +368,7 @@ template void Gemm
 
 void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const float& alpha,
   const float* A, BlasInt ALDim,
   const float* B, BlasInt BLDim,
@@ -392,9 +411,9 @@ void Gemm
 
 void Gemm
 ( char transA, char transB,
-  BlasInt m, BlasInt n, BlasInt k, 
+  BlasInt m, BlasInt n, BlasInt k,
   const double& alpha,
-  const double* A, BlasInt ALDim, 
+  const double* A, BlasInt ALDim,
   const double* B, BlasInt BLDim,
   const double& beta,
         double* C, BlasInt CLDim )
@@ -410,7 +429,7 @@ void Gemm
       {
           if( ALDim < Max(k,1) )
               LogicError("ALDim was too small: ALDim=",ALDim,",k=",k);
-      }      
+      }
 
       if( std::toupper(transB) == 'N' )
       {
@@ -434,9 +453,9 @@ void Gemm
 }
 
 void Gemm
-( char transA, char transB, BlasInt m, BlasInt n, BlasInt k, 
+( char transA, char transB, BlasInt m, BlasInt n, BlasInt k,
   const scomplex& alpha,
-  const scomplex* A, BlasInt ALDim, 
+  const scomplex* A, BlasInt ALDim,
   const scomplex* B, BlasInt BLDim,
   const scomplex& beta,
         scomplex* C, BlasInt CLDim )
@@ -452,7 +471,7 @@ void Gemm
       {
           if( ALDim < Max(k,1) )
               LogicError("ALDim was too small: ALDim=",ALDim,",k=",k);
-      }      
+      }
 
       if( std::toupper(transB) == 'N' )
       {
@@ -474,9 +493,9 @@ void Gemm
 }
 
 void Gemm
-( char transA, char transB, BlasInt m, BlasInt n, BlasInt k, 
+( char transA, char transB, BlasInt m, BlasInt n, BlasInt k,
   const dcomplex& alpha,
-  const dcomplex* A, BlasInt ALDim, 
+  const dcomplex* A, BlasInt ALDim,
   const dcomplex* B, BlasInt BLDim,
   const dcomplex& beta,
         dcomplex* C, BlasInt CLDim )
@@ -492,7 +511,7 @@ void Gemm
       {
           if( ALDim < Max(k,1) )
               LogicError("ALDim was too small: ALDim=",ALDim,",k=",k);
-      }      
+      }
 
       if( std::toupper(transB) == 'N' )
       {

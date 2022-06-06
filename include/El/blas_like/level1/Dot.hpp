@@ -11,22 +11,39 @@
 
 namespace El {
 
-template<typename T>
-T Dot( const Matrix<T>& A, const Matrix<T>& B )
+template<typename T, Device D>
+T Dot( const Matrix<T, D>& A, const Matrix<T, D>& B )
 {
     EL_DEBUG_CSE
     return HilbertSchmidt( A, B );
+}
+
+template<typename T>
+T Dot( const AbstractMatrix<T>& A, const AbstractMatrix<T>& B )
+{
+    if (A.GetDevice() != B.GetDevice())
+        LogicError("Dot requires matching device types.");
+
+    T sum(0);
+    switch(A.GetDevice()) {
+    case Device::CPU:
+      sum = Dot(static_cast<const Matrix<T,Device::CPU>&>(A),
+                static_cast<const Matrix<T,Device::CPU>&>(B));
+      break;
+#ifdef HYDROGEN_HAVE_GPU
+    case Device::GPU:
+      sum = Dot(static_cast<const Matrix<T,Device::GPU>&>(A),
+                static_cast<const Matrix<T,Device::GPU>&>(B));
+      break;
+#endif // HYDROGEN_HAVE_GPU
+    default:
+      LogicError("Unsupported device type.");
+    }
+    return sum;
 }
 
 template<typename T>
 T Dot( const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& B )
-{
-    EL_DEBUG_CSE
-    return HilbertSchmidt( A, B );
-}
-
-template<typename T>
-T Dot( const DistMultiVec<T>& A, const DistMultiVec<T>& B )
 {
     EL_DEBUG_CSE
     return HilbertSchmidt( A, B );
@@ -62,47 +79,33 @@ T Dotu( const ElementalMatrix<T>& A, const ElementalMatrix<T>& B )
     if( A.ColAlign() != B.ColAlign() ||
         A.RowAlign() != B.RowAlign() )
         LogicError("Matrices must be aligned");
+    if ((A.GetLocalDevice() != Device::CPU)
+        || (B.GetLocalDevice() != Device::CPU))
+    {
+        LogicError("Dotu: Only implemented for CPU matrices.");
+    }
+
+    auto syncInfoA = SyncInfoFromMatrix(
+        static_cast<Matrix<T,Device::CPU> const&>(A.LockedMatrix()));
 
     T innerProd;
     if( A.Participating() )
     {
         T localInnerProd(0);
-        auto& ALoc = A.LockedMatrix();
-        auto& BLoc = B.LockedMatrix();
+        auto& ALoc = dynamic_cast<Matrix<T,Device::CPU> const&>(A.LockedMatrix());
+        auto& BLoc = dynamic_cast<Matrix<T,Device::CPU> const&>(B.LockedMatrix());
         const Int localHeight = A.LocalHeight();
         const Int localWidth = A.LocalWidth();
         for( Int jLoc=0; jLoc<localWidth; ++jLoc )
             for( Int iLoc=0; iLoc<localHeight; ++iLoc )
                 localInnerProd += ALoc(iLoc,jLoc)*BLoc(iLoc,jLoc);
-        innerProd = mpi::AllReduce( localInnerProd, A.DistComm() );
+        innerProd = mpi::AllReduce(
+            localInnerProd, A.DistComm(), syncInfoA);
     }
-    mpi::Broadcast( innerProd, A.Root(), A.CrossComm() );
+    mpi::Broadcast(innerProd, A.Root(), A.CrossComm(), syncInfoA);
     return innerProd;
 }
 
-template<typename T>
-T Dotu( const DistMultiVec<T>& A, const DistMultiVec<T>& B )
-{
-    EL_DEBUG_CSE
-    if( !mpi::Congruent( A.Grid().Comm(), B.Grid().Comm() ) )
-        LogicError("A and B must be congruent");
-    if( A.Height() != B.Height() || A.Width() != B.Width() )
-        LogicError("A and B must have the same dimensions");
-    if( A.LocalHeight() != B.LocalHeight() )
-        LogicError("A and B must have the same local heights");
-    if( A.FirstLocalRow() != B.FirstLocalRow() )
-        LogicError("A and B must own the same rows");
-
-    T localInnerProd = 0;
-    const Int localHeight = A.LocalHeight();
-    const Int width = A.Width();
-    auto& ALoc = A.LockedMatrix();
-    auto& BLoc = B.LockedMatrix();
-    for( Int j=0; j<width; ++j )
-        for( Int iLoc=0; iLoc<localHeight; ++iLoc )
-            localInnerProd += ALoc(iLoc,j)*BLoc(iLoc,j);
-    return mpi::AllReduce( localInnerProd, A.Grid().Comm() );
-}
 
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
 # define EL_EXTERN
@@ -114,15 +117,13 @@ T Dotu( const DistMultiVec<T>& A, const DistMultiVec<T>& B )
   EL_EXTERN template T Dot \
   ( const Matrix<T>& A, const Matrix<T>& B ); \
   EL_EXTERN template T Dot \
-  ( const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& B ); \
+  ( const AbstractMatrix<T>& A, const AbstractMatrix<T>& B ); \
   EL_EXTERN template T Dot \
-  ( const DistMultiVec<T>& A, const DistMultiVec<T>& B ); \
+  ( const AbstractDistMatrix<T>& A, const AbstractDistMatrix<T>& B ); \
   EL_EXTERN template T Dotu \
   ( const Matrix<T>& A, const Matrix<T>& B ); \
   EL_EXTERN template T Dotu \
   ( const ElementalMatrix<T>& A, const ElementalMatrix<T>& B ); \
-  EL_EXTERN template T Dotu \
-  ( const DistMultiVec<T>& A, const DistMultiVec<T>& B );
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE

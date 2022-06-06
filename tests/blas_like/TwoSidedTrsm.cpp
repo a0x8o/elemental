@@ -188,7 +188,7 @@ int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
@@ -217,7 +217,7 @@ main( int argc, char* argv[] )
         if( gridHeight == 0 )
             gridHeight = Grid::DefaultHeight( mpi::Size(comm) );
         const GridOrder order = ( colMajor ? COLUMN_MAJOR : ROW_MAJOR );
-        const Grid g( comm, gridHeight, order );
+        const Grid g(std::move(comm), gridHeight, order );
         const UpperOrLower uplo = CharToUpperOrLower( uploChar );
         const UnitOrNonUnit diag = CharToUnitOrNonUnit( diagChar );
         SetBlocksize( blocksize );
@@ -225,7 +225,7 @@ main( int argc, char* argv[] )
         SetDefaultBlockWidth( nb );
 
         ComplainIfDebug();
-        OutputFromRoot(comm,"Will test TwoSidedTrsm",uploChar,diagChar);
+        OutputFromRoot(g.Comm(),"Will test TwoSidedTrsm",uploChar,diagChar);
 
         TestTwoSidedTrsm<float>
         ( uplo, diag, m, g, scalapack, print, correctness );

@@ -1,0 +1,217 @@
+# This will create the H::hydrogen IMPORTED target. It will also
+# export many useful variables that one may want.
+
+include(CMakeFindDependencyMacro)
+include(CheckCompilerFlag)
+include("${CMAKE_CURRENT_LIST_DIR}/HydrogenConfigVersion.cmake")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/modules")
+list(APPEND CMAKE_MODULE_PATH "@EXTRA_CMAKE_MODULE_DIR@")
+
+set(HYDROGEN_VERSION ${PACKAGE_VERSION})
+
+set(HYDROGEN_CXX_COMPILER "@CMAKE_CXX_COMPILER@")
+set(HYDROGEN_CXX_FLAGS "@CMAKE_CXX_FLAGS@")
+set(HYDROGEN_MPI_CXX_COMPILER "@MPI_CXX_COMPILER@")
+
+# FIXME (trb 01/08/2022): The FindAndVerify* modules may not be
+# suitable for dealing with exports. We should consider refactoring
+# this to be consistent with CMake's ideology re: transitive
+# dependency resolution. However, this is separate from the
+# CUDA/ROCm-related issues I'm handling at the moment.
+
+# Note: Setting things in the cache doesn't change anything if the
+# cache variable is already set.
+set(MPI_CXX_COMPILER "${HYDROGEN_MPI_CXX_COMPILER}"
+  CACHE FILEPATH "The MPI CXX compiler.")
+
+set(_HYDROGEN_HAVE_OPENMP @EL_HAVE_OPENMP@)
+if (_HYDROGEN_HAVE_OPENMP)
+  set(_OpenMP_DIR "@OpenMP_DIR@")
+  if (NOT OpenMP_DIR)
+    set(OpenMP_DIR "${_OpenMP_DIR}")
+  endif ()
+  include (FindAndVerifyOpenMP)
+endif (_HYDROGEN_HAVE_OPENMP)
+# FIXME: I should do verification to make sure all found features are
+#   the same.
+include (FindAndVerifyMPI)
+
+# Aluminum
+set(_HYDROGEN_HAVE_ALUMINUM @HYDROGEN_HAVE_ALUMINUM@)
+set(_HYDROGEN_HAVE_NCCL2 @HYDROGEN_HAVE_NCCL2@)
+set(_HYDROGEN_HAVE_AL_MPI_CUDA @HYDROGEN_HAVE_AL_MPI_CUDA@)
+set(_HYDROGEN_HAVE_AL_HOST_XFER @HYDROGEN_HAVE_AL_HOST_XFER@)
+if (_HYDROGEN_HAVE_ALUMINUM)
+  set(_HYDROGEN_MIN_AL_VERSION @ALUMINUM_VERSION@)
+  find_dependency(Aluminum "${HYDROGEN_MIN_AL_VERSION}")
+
+  # This makes the assumption that there are no inter-backend
+  # dependencies among the "device backends" (i.e., any backend is
+  # allowed to depend on MPI, which is always available, but no
+  # backend should depend on any of the other backends). This checks
+  # that AT LEAST the backend set available when building Hydrogen is
+  # available now.
+  if (_HYDROGEN_HAVE_NCCL2 AND NOT AL_HAS_NCCL)
+    set(Hydrogen_NOT_FOUND_MESSAGE
+      "Hydrogen expects NCCL2 support "
+      "but found Aluminum does not have NCCL2 support.")
+    set(Hydrogen_FOUND FALSE)
+  endif ()
+  if (_HYDROGEN_HAVE_AL_HOST_XFER AND NOT AL_HAS_HOST_TRANSFER)
+    set(Hydrogen_NOT_FOUND_MESSAGE
+      "Hydrogen expects HostTransfer support "
+      "but Aluminum does not have HostTransfer support.")
+    set(Hydrogen_FOUND FALSE)
+  endif ()
+  if (_HYDROGEN_HAVE_AL_MPI_CUDA AND NOT AL_HAS_MPI_CUDA)
+    set(Hydrogen_NOT_FOUND_MESSAGE
+      "Hydrogen expects MPI-CUDA support "
+      "but Aluminum does not have MPI-CUDA support.")
+    set(Hydrogen_FOUND FALSE)
+  endif ()
+endif (_HYDROGEN_HAVE_ALUMINUM)
+
+# CUDA!
+set(_HYDROGEN_HAVE_CUDA @HYDROGEN_HAVE_CUDA@)
+set(_HYDROGEN_HAVE_CUB @HYDROGEN_HAVE_CUB@)
+if (_HYDROGEN_HAVE_CUDA)
+  set(_HYDROGEN_EXTERNAL_CUB @H_EXTERNAL_CUB@)
+  set(_HYDROGEN_EXTERNAL_NVTX @H_EXTERNAL_NVTX@)
+
+  find_dependency(CUDAToolkit)
+
+  if (_HYDROGEN_EXTERNAL_CUB)
+    find_dependency(CUB MODULE)
+  endif ()
+
+  if (_HYDROGEN_EXTERNAL_NVTX)
+    find_dependency(NVTX MODULE)
+  endif ()
+endif ()
+
+set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
+if (_HYDROGEN_HAVE_ROCM)
+
+  find_dependency(hip CONFIG)
+
+  if (_HYDROGEN_HAVE_CUB)
+    find_dependency(hipcub)
+    set(HYDROGEN_HAVE_CUB TRUE)
+  else ()
+    set(HYDROGEN_HAVE_CUB FALSE)
+  endif ()
+
+  find_dependency(rocblas CONFIG)
+  find_dependency(rocsolver CONFIG)
+  find_dependency(rocthrust CONFIG)
+  set(HYDROGEN_HAVE_ROCM TRUE)
+endif (_HYDROGEN_HAVE_ROCM)
+
+set(HYDROGEN_HAVE_HALF @HYDROGEN_HAVE_HALF@)
+if (HYDROGEN_HAVE_HALF)
+  find_dependency(HALF)
+endif ()
+
+if (_HYDROGEN_HAVE_CUDA)
+  set(HYDROGEN_GPU_USE_FP16 @HYDROGEN_GPU_USE_FP16@)
+endif ()
+
+# Math libraries
+set(_HYDROGEN_HAVE_QUADMATH "@HYDROGEN_HAVE_QUADMATH@")
+set(_HYDROGEN_HAVE_QD "@HYDROGEN_HAVE_QD@")
+set(_HYDROGEN_HAVE_MPC "@HYDROGEN_HAVE_MPC@")
+set(_HYDROGEN_HAVE_MKL "@HYDROGEN_HAVE_MKL@")
+set(_HYDROGEN_HAVE_MKL_GEMMT "@HYDROGEN_HAVE_MKL_GEMMT@")
+
+# Quadmath
+if (_HYDROGEN_HAVE_QUADMATH)
+  set(${PROJECT_NAME}_ENABLE_QUADMATH TRUE)
+  if (NOT QUADMATH_LIBRARY)
+    set(QUADMATH_LIBRARY "@QUADMATH_LIBRARY@")
+  endif ()
+  if (NOT QUADMATH_INCLUDE_DIR)
+    set(QUADMATH_INCLUDE_DIR "@QUADMATH_INCLUDE_DIR@")
+  endif ()
+endif ()
+
+# QD
+if (_HYDROGEN_HAVE_QD)
+  set(${PROJECT_NAME}_ENABLE_QUADMATH TRUE)
+  if (NOT QD_LIBRARY)
+    set(QD_LIBRARY "@QD_LIBRARY@")
+  endif ()
+  if (NOT QD_INCLUDE_DIR)
+    set(QD_INCLUDE_DIR "@QD_INCLUDE_DIR@")
+  endif ()
+endif ()
+
+# MPC
+if (_HYDROGEN_HAVE_MPC)
+  set(${PROJECT_NAME}_ENABLE_MPC TRUE)
+  if (NOT GMP_LIBRARY)
+    set(GMP_LIBRARY "@GMP_LIBRARY@" CACHE FILEPATH "The GMP library" FORCE)
+  endif ()
+  if (NOT MPFR_LIBRARY)
+    set(MPFR_LIBRARY "@MPFR_LIBRARY@" CACHE FILEPATH "The MPFR library" FORCE)
+  endif ()
+  if (NOT MPC_LIBRARY)
+    set(MPC_LIBRARY "@MPC_LIBRARY@" CACHE FILEPATH "The MPC library" FORCE)
+  endif ()
+  if (NOT GMP_INCLUDE_DIR)
+    set(GMP_INCLUDE_DIR "@GMP_INCLUDE_DIR@"
+      CACHE FILEPATH "The GMP include directory" FORCE)
+  endif ()
+  if (NOT MPFR_INCLUDE_DIR)
+    set(MPFR_INCLUDE_DIR "@MPFR_INCLUDE_DIR@"
+      CACHE FILEPATH "The MPFR include directory" FORCE)
+  endif ()
+  if (NOT MPC_INCLUDE_DIR)
+    set(MPC_INCLUDE_DIR "@MPC_INCLUDE_DIR@"
+      CACHE FILEPATH "The MPC include directory" FORCE)
+  endif ()
+endif (_HYDROGEN_HAVE_MPC)
+
+include("FindAndVerifyExtendedPrecision")
+
+# LAPACK
+set(_HYDROGEN_HAVE_OPENBLAS @HYDROGEN_HAVE_OPENBLAS@)
+if (_HYDROGEN_HAVE_OPENBLAS)
+  set(BLAS_openblas_LIBRARY "@BLAS_openblas_LIBRARY@"
+    CACHE PATH "Path to a library")
+  set(LAPACK_openblas_LIBRARY "@LAPACK_openblas_LIBRARY@"
+    CACHE PATH "Path to a library")
+  set(BLA_VENDOR "OpenBLAS")
+endif ()
+
+include("FindAndVerifyLAPACK")
+
+@PACKAGE_INIT@
+
+# Now actually import the Hydrogen target
+set(_TMP_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIRS@")
+foreach (_DIR ${_TMP_INCLUDE_DIRS})
+  set_and_check(_INCLUDE_DIR "${_DIR}")
+  list(APPEND HYDROGEN_INCLUDE_DIRS "${_INCLUDE_DIR}")
+endforeach (_DIR "${_TMP_INCLUDE_DIRS}")
+
+set(_TMP_LIBRARY_DIRS "@PACKAGE_LIB_INSTALL_DIR@")
+foreach (_DIR ${_TMP_LIBRARY_DIRS})
+  set_and_check(_LIBRARY_DIR "${_DIR}")
+  list(APPEND HYDROGEN_LIBRARY_DIRS "${_LIBRARY_DIR}")
+endforeach (_DIR ${_TMP_LIBRARY_DIRS})
+
+if (NOT TARGET H::Hydrogen)
+  include(${CMAKE_CURRENT_LIST_DIR}/HydrogenTargets.cmake)
+
+  add_library(H::Hydrogen IMPORTED INTERFACE)
+  target_link_libraries(H::Hydrogen INTERFACE H::Hydrogen_CXX
+    $<TARGET_NAME_IF_EXISTS:H::Hydrogen_CUDA>
+    $<TARGET_NAME_IF_EXISTS:H::Hydrogen_ROCM>
+    )
+endif (NOT TARGET H::Hydrogen)
+
+check_required_components(Hydrogen)
+
+set(HYDROGEN_LIBRARIES H::Hydrogen)

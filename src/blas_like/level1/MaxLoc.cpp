@@ -57,14 +57,22 @@ template<typename Real,
 ValueInt<Real> VectorMaxLoc( const AbstractDistMatrix<Real>& x )
 {
     EL_DEBUG_CSE
-    const Int m = x.Height();
     const Int n = x.Width();
     EL_DEBUG_ONLY(
+      const Int m = x.Height();
       if( m != 1 && n != 1 )
           LogicError("Input should have been a vector");
       if( !x.Grid().InGrid() )
           LogicError("viewing processes are not allowed");
     )
+    if (x.GetLocalDevice() != Device::CPU)
+        LogicError("VectorMaxLoc: Only implemented for CPU matrices.");
+
+    auto syncInfoA =
+        SyncInfoFromMatrix(
+            static_cast<Matrix<Real,Device::CPU> const&>(
+                x.LockedMatrix()));
+
     ValueInt<Real> pivot;
     pivot.index = -1;
     pivot.value = limits::Lowest<Real>();
@@ -102,37 +110,13 @@ ValueInt<Real> VectorMaxLoc( const AbstractDistMatrix<Real>& x )
                 }
             }
         }
-        pivot = mpi::AllReduce( pivot, mpi::MaxLocOp<Real>(), x.DistComm() );
+        pivot = mpi::AllReduce(
+            pivot, mpi::MaxLocOp<Real>(), x.DistComm(), syncInfoA);
     }
-    mpi::Broadcast( pivot, x.Root(), x.CrossComm() );
+    mpi::Broadcast(pivot, x.Root(), x.CrossComm(), syncInfoA);
     return pivot;
 }
 
-template<typename Real,
-         typename/*=EnableIf<IsReal<Real>>*/>
-ValueInt<Real> VectorMaxLoc( const DistMultiVec<Real>& x )
-{
-    EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( x.Width() != 1 )
-          LogicError("Input should have been a vector");
-    )
-    ValueInt<Real> pivot;
-    pivot.index = -1;
-    pivot.value = limits::Lowest<Real>();
-    const Int mLocal = x.LocalHeight();
-    for( Int iLoc=0; iLoc<mLocal; ++iLoc )
-    {
-        const Real value = x.GetLocal(iLoc,0);
-        if( value > pivot.value )
-        {
-            pivot.value = value;
-            pivot.index = x.GlobalRow(iLoc);
-        }
-    }
-    pivot = mpi::AllReduce( pivot, mpi::MaxLocOp<Real>(), x.Grid().Comm() );
-    return pivot;
-}
 
 template<typename Real,
          typename/*=EnableIf<IsReal<Real>>*/>
@@ -173,6 +157,14 @@ Entry<Real> MaxLoc( const AbstractDistMatrix<Real>& A )
       if( !A.Grid().InGrid() )
           LogicError("Viewing processes are not allowed");
     )
+    if (A.GetLocalDevice() != Device::CPU)
+        LogicError("MaxLoc: Only implemented for CPU matrices.");
+
+    auto syncInfoA =
+        SyncInfoFromMatrix(
+            static_cast<Matrix<Real,Device::CPU> const&>(
+                A.LockedMatrix()));
+
     const Real* ABuf = A.LockedBuffer();
     const Int ALDim = A.LDim();
 
@@ -201,10 +193,10 @@ Entry<Real> MaxLoc( const AbstractDistMatrix<Real>& A )
             }
         }
         // Compute and store the location of the new pivot
-        pivot = mpi::AllReduce
-                ( pivot, mpi::MaxLocPairOp<Real>(), A.DistComm() );
+        pivot = mpi::AllReduce(
+            pivot, mpi::MaxLocPairOp<Real>(), A.DistComm(), syncInfoA);
     }
-    mpi::Broadcast( pivot, A.Root(), A.CrossComm() );
+    mpi::Broadcast(pivot, A.Root(), A.CrossComm(), syncInfoA);
     return pivot;
 }
 
@@ -272,6 +264,14 @@ SymmetricMaxLoc( UpperOrLower uplo, const AbstractDistMatrix<Real>& A )
       if( !A.Grid().InGrid() )
           LogicError("Viewing processes are not allowed");
     )
+    if (A.GetLocalDevice() != Device::CPU)
+        LogicError("SymmetricMaxLoc: Only implemented for CPU matrices.");
+
+    auto syncInfoA =
+        SyncInfoFromMatrix(
+            static_cast<Matrix<Real,Device::CPU> const&>(
+                A.LockedMatrix()));
+
     Entry<Real> pivot;
     pivot.i = -1;
     pivot.j = -1;
@@ -319,17 +319,16 @@ SymmetricMaxLoc( UpperOrLower uplo, const AbstractDistMatrix<Real>& A )
             }
         }
         // Compute and store the location of the new pivot
-        pivot = mpi::AllReduce
-                ( pivot, mpi::MaxLocPairOp<Real>(), A.DistComm() );
+        pivot = mpi::AllReduce(
+            pivot, mpi::MaxLocPairOp<Real>(), A.DistComm(), syncInfoA);
     }
-    mpi::Broadcast( pivot, A.Root(), A.CrossComm() );
+    mpi::Broadcast(pivot, A.Root(), A.CrossComm(), syncInfoA);
     return pivot;
 }
 
 #define PROTO(Real) \
   template ValueInt<Real> VectorMaxLoc( const Matrix<Real>& x ); \
   template ValueInt<Real> VectorMaxLoc( const AbstractDistMatrix<Real>& x ); \
-  template ValueInt<Real> VectorMaxLoc( const DistMultiVec<Real>& x ); \
   template Entry<Real> MaxLoc( const Matrix<Real>& x ); \
   template Entry<Real> MaxLoc( const AbstractDistMatrix<Real>& x ); \
   template Entry<Real> SymmetricMaxLoc \
@@ -343,6 +342,7 @@ SymmetricMaxLoc( UpperOrLower uplo, const AbstractDistMatrix<Real>& A )
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

@@ -44,7 +44,7 @@ template void Swap
 ( BlasInt n,
   Int* x, BlasInt incx,
   Int* y, BlasInt incy );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template void Swap
 ( BlasInt n,
   DoubleDouble* x, BlasInt incx,
@@ -62,7 +62,13 @@ template void Swap
   Complex<QuadDouble>* x, BlasInt incx,
   Complex<QuadDouble>* y, BlasInt incy );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_HALF
+template void Swap
+( BlasInt n,
+  cpu_half_type* x, BlasInt incx,
+  cpu_half_type* y, BlasInt incy );
+#endif
+#ifdef HYDROGEN_HAVE_QUADMATH
 template void Swap
 ( BlasInt n,
   Quad* x, BlasInt incx,
@@ -72,7 +78,7 @@ template void Swap
   Complex<Quad>* x, BlasInt incx,
   Complex<Quad>* y, BlasInt incy );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template void Swap
 ( BlasInt n,
   BigInt* x, BlasInt incx,

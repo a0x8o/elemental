@@ -54,25 +54,6 @@ void HermitianSolve
     SymmetricSolve( uplo, orientation, A, B, true, ctrl );
 }
 
-// TODO(poulson): Add iterative refinement parameter
-template<typename Field>
-void HermitianSolve
-( const SparseMatrix<Field>& A, Matrix<Field>& B,
-  bool tryLDL, const BisectCtrl& ctrl )
-{
-    EL_DEBUG_CSE
-    SymmetricSolve( A, B, true, tryLDL, ctrl );
-}
-
-// TODO(poulson): Add iterative refinement parameter
-template<typename Field>
-void HermitianSolve
-( const DistSparseMatrix<Field>& A, DistMultiVec<Field>& B,
-  bool tryLDL, const BisectCtrl& ctrl )
-{
-    EL_DEBUG_CSE
-    SymmetricSolve( A, B, true, tryLDL, ctrl );
-}
 
 #define PROTO(Field) \
   template void herm_solve::Overwrite \
@@ -90,19 +71,14 @@ void HermitianSolve
   template void HermitianSolve \
   ( UpperOrLower uplo, Orientation orientation, \
     const AbstractDistMatrix<Field>& A, AbstractDistMatrix<Field>& B, \
-    const LDLPivotCtrl<Base<Field>>& ctrl ); \
-  template void HermitianSolve \
-  ( const SparseMatrix<Field>& A, Matrix<Field>& B, \
-    bool tryLDL, const BisectCtrl& ctrl ); \
-  template void HermitianSolve \
-  ( const DistSparseMatrix<Field>& A, DistMultiVec<Field>& B, \
-    bool tryLDL, const BisectCtrl& ctrl );
+    const LDLPivotCtrl<Base<Field>>& ctrl );
 
 #define EL_NO_INT_PROTO
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

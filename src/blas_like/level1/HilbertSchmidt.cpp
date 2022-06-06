@@ -13,13 +13,17 @@ namespace El {
 
 // TODO(poulson): Think about using a more stable accumulation algorithm?
 
-template<typename Ring>
-Ring HilbertSchmidt( const Matrix<Ring>& A, const Matrix<Ring>& B )
+template <typename Ring>
+Ring HilbertSchmidt(
+    const AbstractMatrix<Ring>& A, const AbstractMatrix<Ring>& B )
 {
     EL_DEBUG_CSE
     if( A.Height() != B.Height() || A.Width() != B.Width() )
         LogicError("Matrices must be the same size");
-    Ring innerProd(0);
+    if (A.GetDevice() != Device::CPU || A.GetDevice() != B.GetDevice())
+        LogicError("HilbertSchmidt not supported for this device.");
+
+    Ring innerProd(0.);
     const Int width = A.Width();
     const Int height = A.Height();
     const Ring* ABuf = A.LockedBuffer();
@@ -57,10 +61,18 @@ Ring HilbertSchmidt
          A.BlockWidth() != B.BlockWidth())
       LogicError("A and B must have the same block size");
 
+    if (A.GetLocalDevice() != Device::CPU)
+        LogicError("HilbertSchmidt: Only implemented for CPU matrices.");
+
+    auto syncInfoA =
+        SyncInfoFromMatrix(
+            static_cast<Matrix<Ring,Device::CPU> const&>(
+                A.LockedMatrix()));
+
     Ring innerProd;
     if( A.Participating() )
     {
-        Ring localInnerProd(0);
+        Ring localInnerProd(0.);
         const Int localHeight = A.LocalHeight();
         const Int localWidth = A.LocalWidth();
         const Ring* ABuf = A.LockedBuffer();
@@ -79,51 +91,29 @@ Ring HilbertSchmidt
                     localInnerProd += Conj(ABuf[iLoc+jLoc*ALDim])*
                                            BBuf[iLoc+jLoc*BLDim];
         }
-        innerProd = mpi::AllReduce( localInnerProd, A.DistComm() );
+        innerProd = mpi::AllReduce(
+            localInnerProd, A.DistComm(), syncInfoA);
     }
-    mpi::Broadcast( innerProd, A.Root(), A.CrossComm() );
+    mpi::Broadcast(innerProd, A.Root(), A.CrossComm(), syncInfoA);
     return innerProd;
-}
-
-template<typename Ring>
-Ring HilbertSchmidt( const DistMultiVec<Ring>& A, const DistMultiVec<Ring>& B )
-{
-    EL_DEBUG_CSE
-    if( !mpi::Congruent( A.Grid().Comm(), B.Grid().Comm() ) )
-        LogicError("A and B must be congruent");
-    if( A.Height() != B.Height() || A.Width() != B.Width() )
-        LogicError("A and B must have the same dimensions");
-    if( A.LocalHeight() != B.LocalHeight() )
-        LogicError("A and B must have the same local heights");
-    if( A.FirstLocalRow() != B.FirstLocalRow() )
-        LogicError("A and B must own the same rows");
-
-    Ring localInnerProd = 0;
-    const Int localHeight = A.LocalHeight();
-    const Int width = A.Width();
-    const Ring* ABuf = A.LockedMatrix().LockedBuffer();
-    const Ring* BBuf = B.LockedMatrix().LockedBuffer();
-    const Int ALDim = A.LockedMatrix().LDim();
-    const Int BLDim = B.LockedMatrix().LDim();
-    for( Int j=0; j<width; ++j )
-        for( Int iLoc=0; iLoc<localHeight; ++iLoc )
-            localInnerProd += Conj(ABuf[iLoc+j*ALDim])*BBuf[iLoc+j*BLDim];
-    return mpi::AllReduce( localInnerProd, A.Grid().Comm() );
 }
 
 #define PROTO(Ring) \
   template Ring HilbertSchmidt \
-  ( const Matrix<Ring>& A, const Matrix<Ring>& B ); \
+  ( const AbstractMatrix<Ring>& A, const AbstractMatrix<Ring>& B );       \
   template Ring HilbertSchmidt \
-  ( const AbstractDistMatrix<Ring>& A, const AbstractDistMatrix<Ring>& B ); \
-  template Ring HilbertSchmidt \
-  ( const DistMultiVec<Ring>& A, const DistMultiVec<Ring>& B );
+  ( const AbstractDistMatrix<Ring>& A, const AbstractDistMatrix<Ring>& B );
+
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

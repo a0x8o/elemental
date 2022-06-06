@@ -19,7 +19,6 @@
 #include <El/blas_like/level1/ConjugateDiagonal.hpp>
 #include <El/blas_like/level1/ConjugateSubmatrix.hpp>
 #include <El/blas_like/level1/Contract.hpp>
-#include <El/blas_like/level1/Copy.hpp>
 #include <El/blas_like/level1/DiagonalScale.hpp>
 #include <El/blas_like/level1/DiagonalScaleTrapezoid.hpp>
 #include <El/blas_like/level1/DiagonalSolve.hpp>
@@ -28,7 +27,6 @@
 #include <El/blas_like/level1/EntrywiseMap.hpp>
 #include <El/blas_like/level1/Fill.hpp>
 #include <El/blas_like/level1/FillDiagonal.hpp>
-#include <El/blas_like/level1/Full.hpp>
 #include <El/blas_like/level1/GetDiagonal.hpp>
 #include <El/blas_like/level1/GetMappedDiagonal.hpp>
 #include <El/blas_like/level1/GetSubmatrix.hpp>

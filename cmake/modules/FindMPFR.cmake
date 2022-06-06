@@ -1,72 +1,106 @@
-# Try to find the MPFR library
-# See http://www.mpfr.org/
+# Sets the following variables:
 #
-# This module supports requiring a minimum version, e.g. you can do
-#   find_package(MPFR 2.3.0)
-# to require version 2.3.0 to newer of MPFR.
-#
-# Once done this will define
-#
-#  MPFR_FOUND - system has MPFR lib with correct version
-#  MPFR_INCLUDES - the MPFR include directory
-#  MPFR_LIBRARIES - the MPFR library
-#  MPFR_VERSION - MPFR version
+#   MPFR_FOUND
+#   MPFR_VERSION_OK
+#   MPFR_INCLUDE_DIR -- Location of mpfr.h
+#   MPFR_LIBRARIES -- libmpfr library
 
-# Copyright (c) 2006, 2007 Montel Laurent, <montel@kde.org>
-# Copyright (c) 2008, 2009 Gael Guennebaud, <g.gael@free.fr>
-# Copyright (c) 2010 Jitse Niesen, <jitse@maths.leeds.ac.uk>
-# Copyright (c) 2015 Jack Poulson, <jack.poulson@gmail.com>
-# Redistribution and use is allowed according to the terms of the BSD license.
+if (MPFR_FIND_VERSION_COUNT EQUAL 0)
+  if (MPFR_REQUIRED_VERSION)
+    set(MPFR_FIND_VERSION "${MPFR_REQUIRED_VERSION}")
+  else ()
+    set(MPFR_FIND_VERSION "1.0.0")
+  endif ()
+endif ()
 
-find_path(MPFR_INCLUDES NAMES mpfr.h PATHS $ENV{GMPDIR} $ENV{MPFRDIR}
-  ${INCLUDE_INSTALL_DIR})
+if (MPFR_FIND_QUIETLY)
+  set(__quiet_flag "QUIET")
+else ()
+  unset(__quiet_flag)
+endif ()
+find_package(GMP "${GMP_REQUIRED_VERSION}" ${__quiet_flag})
 
-# Set MPFR_FIND_VERSION to 1.0.0 if no minimum version is specified
-if(NOT MPFR_FIND_VERSION)
-  if(NOT MPFR_FIND_VERSION_MAJOR)
-    set(MPFR_FIND_VERSION_MAJOR 1)
-  endif()
-  if(NOT MPFR_FIND_VERSION_MINOR)
-    set(MPFR_FIND_VERSION_MINOR 0)
-  endif()
-  if(NOT MPFR_FIND_VERSION_PATCH)
-    set(MPFR_FIND_VERSION_PATCH 0)
-  endif()
-  set(MPFR_FIND_VERSION
-    "${MPFR_FIND_VERSION_MAJOR}.${MPFR_FIND_VERSION_MINOR}.${MPFR_FIND_VERSION_PATCH}")
-endif()
+if (GMP_FOUND)
+  find_path(MPFR_INCLUDE_DIR mpfr.h
+    HINTS ${MPFR_DIR} $ENV{MPFR_DIR} ${GMP_DIR} $ENV{GMP_DIR}
+    PATH_SUFFIXES include
+    NO_DEFAULT_PATH
+    DOC "Directory with mpfr.h header.")
+  find_path(MPFR_INCLUDE_DIR mpfr.h)
 
-if(MPFR_INCLUDES)
-  # Query MPFR_VERSION
-  file(READ "${MPFR_INCLUDES}/mpfr.h" _mpfr_version_header)
+  find_library(MPFR_LIBRARY mpfr
+    HINTS ${MPFR_DIR} $ENV{MPFR_DIR} ${GMP_DIR} $ENV{GMP_DIR}
+    PATH_SUFFIXES lib64 lib
+    NO_DEFAULT_PATH
+    DOC "The MPFR library.")
+  find_library(MPFR_LIBRARY mpfr)
 
-  string(REGEX MATCH "define[ \t]+MPFR_VERSION_MAJOR[ \t]+([0-9]+)"
-    _mpfr_major_version_match "${_mpfr_version_header}")
-  set(MPFR_MAJOR_VERSION "${CMAKE_MATCH_1}")
-  string(REGEX MATCH "define[ \t]+MPFR_VERSION_MINOR[ \t]+([0-9]+)"
-    _mpfr_minor_version_match "${_mpfr_version_header}")
-  set(MPFR_MINOR_VERSION "${CMAKE_MATCH_1}")
-  string(REGEX MATCH "define[ \t]+MPFR_VERSION_PATCHLEVEL[ \t]+([0-9]+)"
-    _mpfr_patchlevel_version_match "${_mpfr_version_header}")
-  set(MPFR_PATCHLEVEL_VERSION "${CMAKE_MATCH_1}")
+  if (MPFR_LIBRARY AND MPFR_INCLUDE_DIR)
+    
+    set(MPFR_VERSION_CODE "
+#include <iostream>
+#include <gmp.h>
+#include <mpfr.h>
+int main(void)
+{
+  mpfr_t a;
+  mpfr_prec_t prec = 256;
+  mpfr_init2( a, prec );
 
-  set(MPFR_VERSION
-    ${MPFR_MAJOR_VERSION}.${MPFR_MINOR_VERSION}.${MPFR_PATCHLEVEL_VERSION})
+  gmp_randstate_t randState;
+  gmp_randinit_default( randState );
+  const long seed = 1024;
+  gmp_randseed_ui( randState, seed );
 
-  # Check whether found version exceeds minimum required
-  if(${MPFR_VERSION} VERSION_LESS ${MPFR_FIND_VERSION})
-    set(MPFR_VERSION_OK FALSE)
-    message(STATUS "MPFR version ${MPFR_VERSION} found in ${MPFR_INCLUDES}, "
-                   "but at least version ${MPFR_FIND_VERSION} is required")
-  else()
-    set(MPFR_VERSION_OK TRUE)
-  endif()
-endif()
+  std::cout << mpfr_get_version();
+}")
+    file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx"
+      "${MPFR_VERSION_CODE}\n")
+    
+    if(NOT MPFR_FIND_QUIETLY)
+      message(STATUS "Performing Test MPFR_VERSION_COMPILES")
+    endif()
+    
+    try_run(MPFR_VERSION_RUNS MPFR_VERSION_COMPILES
+      ${CMAKE_BINARY_DIR}
+      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx
+      LINK_LIBRARIES "${MPFR_LIBRARY}" "${GMP_LIBRARY}"
+      CMAKE_FLAGS
+      -DCOMPILE_DEFINITIONS=-DMPFR_VERSION_COMPILES
+      "-DINCLUDE_DIRECTORIES=${MPFR_INCLUDE_DIR};${GMP_INCLUDE_DIR}"
+      -DCMAKE_SKIP_RPATH:BOOL=${CMAKE_SKIP_RPATH}
+      COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT
+      RUN_OUTPUT_VARIABLE RUN_OUTPUT)
 
-find_library(MPFR_LIBRARIES mpfr
-  PATHS $ENV{GMPDIR} $ENV{MPFRDIR} ${LIB_INSTALL_DIR})
+    if (NOT MPFR_VERSION_RUNS STREQUAL "FAILED_TO_RUN")
+      if (RUN_OUTPUT VERSION_LESS MPFR_FIND_VERSION)
+        set(MPFR_VERSION_OK FALSE)
+      else ()
+        set(MPFR_VERSION_FOUND "${RUN_OUTPUT}")
+        set(MPFR_VERSION_OK TRUE)
+      endif ()
+    else ()
+      
+      message(WARNING "Found libmpfr but could compile with it.")
+
+    endif (NOT MPFR_VERSION_RUNS STREQUAL "FAILED_TO_RUN")
+  endif (MPFR_LIBRARY AND MPFR_INCLUDE_DIR)
+endif (GMP_FOUND)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MPFR DEFAULT_MSG
-                                  MPFR_INCLUDES MPFR_LIBRARIES MPFR_VERSION_OK)
-mark_as_advanced(MPFR_INCLUDES MPFR_LIBRARIES)
+  MPFR_VERSION_FOUND MPFR_LIBRARY MPFR_INCLUDE_DIR MPFR_VERSION_OK)
+
+if (MPFR_FOUND)
+  if (NOT TARGET EP::mpfr)
+    add_library(EP::mpfr INTERFACE IMPORTED)
+    
+    set_property(TARGET EP::mpfr
+      PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${MPFR_INCLUDE_DIR}")
+    set_property(TARGET EP::mpfr
+      PROPERTY INTERFACE_LINK_LIBRARIES "${MPFR_LIBRARY}")
+  endif ()
+  
+  set(MPFR_LIBRARIES EP::mpfr ${GMP_LIBRARIES})
+  mark_as_advanced(MPFR_LIBRARY MPFR_INCLUDE_DIR)
+endif ()

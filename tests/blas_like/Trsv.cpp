@@ -68,7 +68,7 @@ int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
 
     try
     {
@@ -88,14 +88,14 @@ main( int argc, char* argv[] )
         if( gridHeight == 0 )
             gridHeight = Grid::DefaultHeight( mpi::Size(comm) );
         const GridOrder order = colMajor ? COLUMN_MAJOR : ROW_MAJOR;
-        const Grid g( comm, gridHeight, order );
+        const Grid g(std::move(comm), gridHeight, order );
         const UpperOrLower uplo = CharToUpperOrLower( uploChar );
         const Orientation orientation = CharToOrientation( transChar );
         const UnitOrNonUnit diag = CharToUnitOrNonUnit( diagChar );
         SetBlocksize( nb );
 
         ComplainIfDebug();
-        OutputFromRoot(comm,"Will test Trsv ",uploChar,transChar,diagChar);
+        OutputFromRoot(g.Comm(),"Will test Trsv ",uploChar,transChar,diagChar);
 
         TestTrsv<float>( uplo, orientation, diag, n, g, print );
         TestTrsv<Complex<float>>( uplo, orientation, diag, n, g, print );

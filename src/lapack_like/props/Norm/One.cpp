@@ -74,6 +74,8 @@ Base<Ring> SymmetricOneNorm( UpperOrLower uplo, const Matrix<Ring>& A )
     return HermitianOneNorm( uplo, A );
 }
 
+#if 0 // TOM
+
 template<typename Ring>
 Base<Ring> OneNorm( const AbstractDistMatrix<Ring>& A )
 {
@@ -232,23 +234,7 @@ SymmetricOneNorm( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A )
     return HermitianOneNorm( uplo, A );
 }
 
-template<typename Ring>
-Base<Ring> OneNorm( const SparseMatrix<Ring>& A )
-{
-    EL_DEBUG_CSE
-    SparseMatrix<Ring> ATrans;
-    Transpose( A, ATrans );
-    return InfinityNorm( ATrans );
-}
-
-template<typename Ring>
-Base<Ring> OneNorm( const DistSparseMatrix<Ring>& A )
-{
-    EL_DEBUG_CSE
-    DistSparseMatrix<Ring> ATrans(A.Grid());
-    Transpose( A, ATrans );
-    return InfinityNorm( ATrans );
-}
+#endif // 0 TOM
 
 template<typename Ring>
 Base<Ring> HermitianTridiagOneNorm
@@ -279,24 +265,26 @@ Base<Ring> HermitianTridiagOneNorm
 
 #define PROTO(Ring) \
   template Base<Ring> OneNorm( const Matrix<Ring>& A ); \
-  template Base<Ring> OneNorm ( const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> HermitianOneNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
-  template Base<Ring> HermitianOneNorm \
-  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
   template Base<Ring> SymmetricOneNorm \
   ( UpperOrLower uplo, const Matrix<Ring>& A ); \
-  template Base<Ring> SymmetricOneNorm \
-  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
-  template Base<Ring> OneNorm( const SparseMatrix<Ring>& A ); \
-  template Base<Ring> OneNorm( const DistSparseMatrix<Ring>& A ); \
   template Base<Ring> HermitianTridiagOneNorm \
   ( const Matrix<Base<Ring>>& d, const Matrix<Ring>& e );
+
+/*
+  template Base<Ring> OneNorm ( const AbstractDistMatrix<Ring>& A ); \
+  template Base<Ring> HermitianOneNorm \
+  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
+  template Base<Ring> SymmetricOneNorm \
+  ( UpperOrLower uplo, const AbstractDistMatrix<Ring>& A ); \
+*/
 
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGFLOAT
+/*#undef EL_ENABLE_HALF*/
 #include <El/macros/Instantiate.h>
 
 } // namespace El

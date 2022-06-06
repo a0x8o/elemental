@@ -20,7 +20,7 @@ void Toeplitz( Matrix<S>& A, Int m, Int n, const vector<T>& a )
     if( a.size() != Unsigned(length) )
         LogicError("a was the wrong size");
     A.Resize( m, n );
-    auto toeplitzFill = [&]( Int i, Int j ) { return a[i-j+(n-1)]; };
+    auto toeplitzFill = [&]( Int i, Int j ) { return S(a[i-j+(n-1)]); };
     IndexDependentFill( A, function<S(Int,Int)>(toeplitzFill) );
 }
 
@@ -32,7 +32,7 @@ void Toeplitz( AbstractDistMatrix<S>& A, Int m, Int n, const vector<T>& a )
     if( a.size() != Unsigned(length) )
         LogicError("a was the wrong size");
     A.Resize( m, n );
-    auto toeplitzFill = [&]( Int i, Int j ) { return a[i-j+(n-1)]; };
+    auto toeplitzFill = [&]( Int i, Int j ) { return S(a[i-j+(n-1)]); };
     IndexDependentFill( A, function<S(Int,Int)>(toeplitzFill) );
 }
 
@@ -60,6 +60,7 @@ void Toeplitz( AbstractDistMatrix<S>& A, Int m, Int n, const vector<T>& a )
 #define EL_ENABLE_QUAD
 #define EL_ENABLE_BIGINT
 #define EL_ENABLE_BIGFLOAT
+#define EL_ENABLE_HALF
 #include <El/macros/Instantiate.h>
 
 } // namespace El

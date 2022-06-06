@@ -13,7 +13,7 @@ int
 main( int argc, char* argv[] )
 {
     Environment env( argc, argv );
-    mpi::Comm comm = mpi::COMM_WORLD;
+    mpi::Comm comm = mpi::NewWorldComm();
     const Int commRank = mpi::Rank( comm );
 
     try
@@ -31,14 +31,14 @@ main( int argc, char* argv[] )
         if( gridHeight == 0 )
             gridHeight = Grid::DefaultHeight( mpi::Size(comm) );
         const GridOrder order = colMajor ? COLUMN_MAJOR : ROW_MAJOR;
-        const Grid g( comm, gridHeight, order );
+        const Grid g(std::move(comm), gridHeight, order );
 
         SchurCtrl<double> ctrl;
         ctrl.hessSchurCtrl.fullTriangle = fullTriangle;
 
         DistMatrix<Complex<double>,MC,MR,BLOCK> A(n,n,g,mb,nb);
         Fill( A, Complex<double>(1) );
-        A.Matrix() *= double(commRank);
+        Scale(double(commRank), A.Matrix());
         if( print )
             Print( A, "A" );
         DistMatrix<Complex<double>> AElem( A );

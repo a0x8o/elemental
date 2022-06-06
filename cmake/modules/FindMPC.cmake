@@ -1,66 +1,114 @@
-# Try to find the MPC library
-# See http://www.multiprecision.org/index.php?prog=mpc&page=home
+# Sets the following variables:
 #
-# This module supports requiring a minimum version, e.g. you can do
-#   find_package(MPC 1.0.3)
-# to require version 1.0.3 to newer of MPC.
-#
-# Once done this will define
-#
-#  MPC_FOUND - system has MPC lib with correct version
-#  MPC_INCLUDES - the MPC include directory
-#  MPC_LIBRARIES - the MPC library
-#  MPC_VERSION - MPC version
+#   MPC_FOUND
+#   MPC_VERSION_OK
+#   MPC_INCLUDE_DIR -- Location of mpfr.h
+#   MPC_LIBRARIES -- libmpfr library
 
-find_path(MPC_INCLUDES NAMES mpc.h PATHS $ENV{GMPDIR} $ENV{MPFRDIR} $ENV{MPCDIR}
-  ${INCLUDE_INSTALL_DIR})
+if (MPC_FIND_VERSION_COUNT EQUAL 0)
+  if (MPC_REQUIRED_VERSION)
+    set(MPC_FIND_VERSION "${MPC_REQUIRED_VERSION}")
+  else ()
+    set(MPC_FIND_VERSION "1.0.0")
+  endif ()
+endif ()
 
-# Set MPC_FIND_VERSION to 1.0.0 if no minimum version is specified
-if(NOT MPC_FIND_VERSION)
-  if(NOT MPC_FIND_VERSION_MAJOR)
-    set(MPC_FIND_VERSION_MAJOR 1)
-  endif()
-  if(NOT MPC_FIND_VERSION_MINOR)
-    set(MPC_FIND_VERSION_MINOR 0)
-  endif()
-  if(NOT MPC_FIND_VERSION_PATCH)
-    set(MPC_FIND_VERSION_PATCH 0)
-  endif()
-  set(MPC_FIND_VERSION
-    "${MPC_FIND_VERSION_MAJOR}.${MPC_FIND_VERSION_MINOR}.${MPC_FIND_VERSION_PATCH}")
-endif()
+if (MPC_FIND_QUIETLY)
+  set(__quiet_flag "QUIET")
+else ()
+  unset(__quiet_flag)
+endif ()
+find_package(MPFR "${MPFR_REQUIRED_VERSION}" ${__quiet_flag})
 
-if(MPC_INCLUDES)
-  # Query MPC_VERSION
-  file(READ "${MPC_INCLUDES}/mpc.h" _mpc_version_header)
+if (MPFR_FOUND)
+  find_path(MPC_INCLUDE_DIR mpc.h
+    HINTS ${MPC_DIR} $ENV{MPC_DIR} ${MPFR_DIR} $ENV{MPFR_DIR}
+      ${GMP_DIR} $ENV{GMP_DIR}
+    PATH_SUFFIXES include
+    NO_DEFAULT_PATH
+    DOC "Directory with mpc.h header.")
+  find_path(MPC_INCLUDE_DIR mpc.h)
 
-  string(REGEX MATCH "define[ \t]+MPC_VERSION_MAJOR[ \t]+([0-9]+)"
-    _mpc_major_version_match "${_mpc_version_header}")
-  set(MPC_MAJOR_VERSION "${CMAKE_MATCH_1}")
-  string(REGEX MATCH "define[ \t]+MPC_VERSION_MINOR[ \t]+([0-9]+)"
-    _mpc_minor_version_match "${_mpc_version_header}")
-  set(MPC_MINOR_VERSION "${CMAKE_MATCH_1}")
-  string(REGEX MATCH "define[ \t]+MPC_VERSION_PATCHLEVEL[ \t]+([0-9]+)"
-    _mpc_patchlevel_version_match "${_mpc_version_header}")
-  set(MPC_PATCHLEVEL_VERSION "${CMAKE_MATCH_1}")
+  find_library(MPC_LIBRARY mpc
+    HINTS ${MPC_DIR} $ENV{MPC_DIR} ${MPFR_DIR} $ENV{MPFR_DIR}
+      ${GMP_DIR} $ENV{GMP_DIR}
+    PATH_SUFFIXES lib64 lib
+    NO_DEFAULT_PATH
+    DOC "The MPC library.")
+  find_library(MPC_LIBRARY mpc)
 
-  set(MPC_VERSION
-    ${MPC_MAJOR_VERSION}.${MPC_MINOR_VERSION}.${MPC_PATCHLEVEL_VERSION})
+  if (MPC_LIBRARY AND MPC_INCLUDE_DIR)
+    
+    set(MPC_VERSION_CODE "
+#include <iostream>
+#include <gmp.h>
+#include <mpfr.h>
+#include <mpc.h>
+int main(void)
+{
+  mpfr_t a;
+  mpfr_prec_t prec = 256;
+  mpfr_init2( a, prec );
 
-  # Check whether found version exceeds minimum required
-  if(${MPC_VERSION} VERSION_LESS ${MPC_FIND_VERSION})
-    set(MPC_VERSION_OK FALSE)
-    message(STATUS "MPC version ${MPC_VERSION} found in ${MPC_INCLUDES}, "
-                   "but at least version ${MPC_FIND_VERSION} is required")
-  else()
-    set(MPC_VERSION_OK TRUE)
-  endif()
-endif(MPC_INCLUDES)
+  mpc_t b;
+  mpc_init2( b, prec );
 
-find_library(MPC_LIBRARIES mpc
-  PATHS $ENV{GMPDIR} $ENV{MPFRDIR} $ENV{MPCDIR} ${LIB_INSTALL_DIR})
+  gmp_randstate_t randState;
+  gmp_randinit_default( randState );
+  const long seed = 1024;
+  gmp_randseed_ui( randState, seed );
+
+  std::cout << mpc_get_version();
+}")
+    file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx"
+      "${MPC_VERSION_CODE}\n")
+    
+    if(NOT MPC_FIND_QUIETLY)
+      message(STATUS "Performing Test MPC_VERSION_COMPILES")
+    endif()
+
+    set(__include_dirs
+      "${MPC_INCLUDE_DIR}" "${MPFR_INCLUDE_DIR}" "${GMP_INCLUDE_DIR}")
+    try_run(MPC_VERSION_RUNS MPC_VERSION_COMPILES
+      ${CMAKE_BINARY_DIR}
+      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx
+      LINK_LIBRARIES "${MPC_LIBRARY}" "${MPFR_LIBRARY}" "${GMP_LIBRARY}"
+      CMAKE_FLAGS
+      -DCOMPILE_DEFINITIONS=-DMPC_VERSION_COMPILES
+      "-DINCLUDE_DIRECTORIES=${__include_dirs}"
+      -DCMAKE_SKIP_RPATH:BOOL=${CMAKE_SKIP_RPATH}
+      COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT
+      RUN_OUTPUT_VARIABLE RUN_OUTPUT)
+
+    if (NOT MPC_VERSION_RUNS STREQUAL "FAILED_TO_RUN")
+      if (RUN_OUTPUT VERSION_LESS MPC_FIND_VERSION)
+        set(MPC_VERSION_OK FALSE)
+      else ()
+        set(MPC_VERSION_FOUND "${RUN_OUTPUT}")
+        set(MPC_VERSION_OK TRUE)
+      endif ()
+    else ()
+      
+      message(WARNING "Found libmpfr but could compile with it.")
+
+    endif (NOT MPC_VERSION_RUNS STREQUAL "FAILED_TO_RUN")
+  endif (MPC_LIBRARY AND MPC_INCLUDE_DIR)
+endif (MPFR_FOUND)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MPC DEFAULT_MSG
-                                  MPC_INCLUDES MPC_LIBRARIES MPC_VERSION_OK)
-mark_as_advanced(MPC_INCLUDES MPC_LIBRARIES)
+  MPC_VERSION_FOUND MPC_LIBRARY MPC_INCLUDE_DIR MPC_VERSION_OK)
+
+if (MPC_FOUND)
+  if (NOT TARGET EP::mpc)
+    add_library(EP::mpc INTERFACE IMPORTED)
+    
+    set_property(TARGET EP::mpc
+      PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${MPC_INCLUDE_DIR}")
+    set_property(TARGET EP::mpc
+      PROPERTY INTERFACE_LINK_LIBRARIES "${MPC_LIBRARY}")
+  endif ()
+  
+  set(MPC_LIBRARIES EP::mpc ${MPFR_LIBRARIES} ${GMP_LIBRARIES})
+  mark_as_advanced(MPC_LIBRARY MPC_INCLUDE_DIR)
+endif ()

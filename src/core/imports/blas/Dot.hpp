@@ -2,8 +2,8 @@
    Copyright (c) 2009-2016, Jack Poulson
    All rights reserved.
 
-   This file is part of Elemental and is under the BSD 2-Clause License, 
-   which can be found in the LICENSE file in the root directory, or at 
+   This file is part of Elemental and is under the BSD 2-Clause License,
+   which can be found in the LICENSE file in the root directory, or at
    http://opensource.org/licenses/BSD-2-Clause
 */
 
@@ -32,7 +32,7 @@ T Dot
     // NOTE: Temporaries are avoided since constructing a BigInt/BigFloat
     //       involves a memory allocation
     T gamma;
-    T alpha = 0;
+    T alpha(0.);
     for( BlasInt i=0; i<n; ++i )
     {
         Conj( x[i*incx], gamma );
@@ -57,50 +57,62 @@ template dcomplex Dot
 ( BlasInt n,
   const dcomplex* x, BlasInt incx,
   const dcomplex* y, BlasInt incy );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template DoubleDouble Dot
 ( BlasInt n,
-  const DoubleDouble* x, BlasInt incx, 
+  const DoubleDouble* x, BlasInt incx,
   const DoubleDouble* y, BlasInt incy );
 template QuadDouble Dot
 ( BlasInt n,
-  const QuadDouble* x, BlasInt incx, 
+  const QuadDouble* x, BlasInt incx,
   const QuadDouble* y, BlasInt incy );
 template Complex<DoubleDouble> Dot
 ( BlasInt n,
-  const Complex<DoubleDouble>* x, BlasInt incx, 
+  const Complex<DoubleDouble>* x, BlasInt incx,
   const Complex<DoubleDouble>* y, BlasInt incy );
 template Complex<QuadDouble> Dot
 ( BlasInt n,
-  const Complex<QuadDouble>* x, BlasInt incx, 
+  const Complex<QuadDouble>* x, BlasInt incx,
   const Complex<QuadDouble>* y, BlasInt incy );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template Quad Dot
 ( BlasInt n,
-  const Quad* x, BlasInt incx, 
+  const Quad* x, BlasInt incx,
   const Quad* y, BlasInt incy );
 template Complex<Quad> Dot
 ( BlasInt n,
-  const Complex<Quad>* x, BlasInt incx, 
+  const Complex<Quad>* x, BlasInt incx,
   const Complex<Quad>* y, BlasInt incy );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_HALF
+template cpu_half_type Dot
+( BlasInt n,
+  const cpu_half_type* x, BlasInt incx,
+  const cpu_half_type* y, BlasInt incy );
+#endif
+#ifdef HYDROGEN_GPU_USE_FP16
+template gpu_half_type Dot
+( BlasInt n,
+  const gpu_half_type* x, BlasInt incx,
+  const gpu_half_type* y, BlasInt incy );
+#endif
+#ifdef HYDROGEN_HAVE_MPC
 template BigInt Dot
 ( BlasInt n,
-  const BigInt* x, BlasInt incx, 
+  const BigInt* x, BlasInt incx,
   const BigInt* y, BlasInt incy );
 template BigFloat Dot
 ( BlasInt n,
-  const BigFloat* x, BlasInt incx, 
+  const BigFloat* x, BlasInt incx,
   const BigFloat* y, BlasInt incy );
 template Complex<BigFloat> Dot
 ( BlasInt n,
-  const Complex<BigFloat>* x, BlasInt incx, 
+  const Complex<BigFloat>* x, BlasInt incx,
   const Complex<BigFloat>* y, BlasInt incy );
 #endif
 
-// NOTE: I am under the impression that it is generally unsafe to return 
+// NOTE: I am under the impression that it is generally unsafe to return
 //       anything except a double-precision float to C from Fortran
 double Dot
 ( BlasInt n,
@@ -142,46 +154,46 @@ template dcomplex Dotu
 ( BlasInt n,
   const dcomplex* x, BlasInt incx,
   const dcomplex* y, BlasInt incy );
-#ifdef EL_HAVE_QD
+#ifdef HYDROGEN_HAVE_QD
 template DoubleDouble Dotu
 ( BlasInt n,
-  const DoubleDouble* x, BlasInt incx, 
+  const DoubleDouble* x, BlasInt incx,
   const DoubleDouble* y, BlasInt incy );
 template QuadDouble Dotu
 ( BlasInt n,
-  const QuadDouble* x, BlasInt incx, 
+  const QuadDouble* x, BlasInt incx,
   const QuadDouble* y, BlasInt incy );
 template Complex<DoubleDouble> Dotu
 ( BlasInt n,
-  const Complex<DoubleDouble>* x, BlasInt incx, 
+  const Complex<DoubleDouble>* x, BlasInt incx,
   const Complex<DoubleDouble>* y, BlasInt incy );
 template Complex<QuadDouble> Dotu
 ( BlasInt n,
-  const Complex<QuadDouble>* x, BlasInt incx, 
+  const Complex<QuadDouble>* x, BlasInt incx,
   const Complex<QuadDouble>* y, BlasInt incy );
 #endif
-#ifdef EL_HAVE_QUAD
+#ifdef HYDROGEN_HAVE_QUADMATH
 template Quad Dotu
 ( BlasInt n,
-  const Quad* x, BlasInt incx, 
+  const Quad* x, BlasInt incx,
   const Quad* y, BlasInt incy );
 template Complex<Quad> Dotu
 ( BlasInt n,
-  const Complex<Quad>* x, BlasInt incx, 
+  const Complex<Quad>* x, BlasInt incx,
   const Complex<Quad>* y, BlasInt incy );
 #endif
-#ifdef EL_HAVE_MPC
+#ifdef HYDROGEN_HAVE_MPC
 template BigInt Dotu
 ( BlasInt n,
-  const BigInt* x, BlasInt incx, 
+  const BigInt* x, BlasInt incx,
   const BigInt* y, BlasInt incy );
 template BigFloat Dotu
 ( BlasInt n,
-  const BigFloat* x, BlasInt incx, 
+  const BigFloat* x, BlasInt incx,
   const BigFloat* y, BlasInt incy );
 template Complex<BigFloat> Dotu
 ( BlasInt n,
-  const Complex<BigFloat>* x, BlasInt incx, 
+  const Complex<BigFloat>* x, BlasInt incx,
   const Complex<BigFloat>* y, BlasInt incy );
 #endif
 

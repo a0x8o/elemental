@@ -9,60 +9,51 @@
 */
 #include <El-lite.hpp>
 
-namespace El {
+#include <memory>
 
-Grid* Grid::defaultGrid = 0;
-Grid* Grid::trivialGrid = 0;
+namespace El {
 
 void Grid::InitializeDefault()
 {
-    EL_DEBUG_CSE
-    defaultGrid = new Grid( mpi::COMM_WORLD );
 }
 
 void Grid::InitializeTrivial()
 {
-    EL_DEBUG_CSE
-    trivialGrid = new Grid( mpi::COMM_SELF );
 }
 
 void Grid::FinalizeDefault()
 {
-    EL_DEBUG_CSE
-    delete defaultGrid;
-    defaultGrid = 0;
 }
 
 void Grid::FinalizeTrivial()
 {
-    EL_DEBUG_CSE
-    delete trivialGrid;
-    trivialGrid = 0;
 }
 
 const Grid& Grid::Default() EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( defaultGrid == 0 )
-          LogicError
-          ("Attempted to return a non-existant default grid. Please ensure "
-           "that Elemental is initialized before creating a DistMatrix.");
-    )
+    static std::unique_ptr<Grid> defaultGrid;
+    if (!defaultGrid)
+    {
+        Output("Warning: Grid::Default() is being deprecated.");
+        defaultGrid = MakeUnique<Grid>(MPI_COMM_WORLD);
+    }
     return *defaultGrid;
 }
+
 
 const Grid& Grid::Trivial() EL_NO_RELEASE_EXCEPT
 {
     EL_DEBUG_CSE
-    EL_DEBUG_ONLY(
-      if( trivialGrid == 0 )
-          LogicError
-          ("Attempted to return a non-existant trivial grid. Please ensure "
-           "that Elemental is initialized before creating a DistMatrix.");
-    )
+    static std::unique_ptr<Grid> trivialGrid;
+    if (!trivialGrid)
+    {
+        Output("WARNING: Grid::Trivial() is being deprecated.");
+        trivialGrid = MakeUnique<Grid>(MPI_COMM_SELF);
+    }
     return *trivialGrid;
 }
+
 
 int Grid::DefaultHeight( int gridSize ) EL_NO_EXCEPT
 {
@@ -72,38 +63,29 @@ int Grid::DefaultHeight( int gridSize ) EL_NO_EXCEPT
     return gridHeight;
 }
 
-Grid::Grid( mpi::Comm comm, GridOrder order )
-: haveViewers_(false), order_(order)
+Grid::Grid()
+    : Grid{mpi::NewWorldComm()}
+{}
+
+Grid::Grid(mpi::Comm comm, GridOrder order)
+    : Grid{std::move(comm), -1, order}
+{}
+
+Grid::Grid(mpi::Comm comm, int height, GridOrder order)
+    : haveViewers_(false),
+      order_(order),
+      viewingComm_{std::move(comm)}
 {
     EL_DEBUG_CSE
 
     // Extract our rank, the underlying group, and the number of processes
-    mpi::Dup( comm, viewingComm_ );
     mpi::CommGroup( viewingComm_, viewingGroup_ );
     size_ = mpi::Size( viewingComm_ );
 
     // All processes own the grid, so we have to trivially split viewingGroup_
     owningGroup_ = viewingGroup_;
 
-    // Factor p
-    height_ = DefaultHeight( size_ );
-    SetUpGrid();
-}
-
-Grid::Grid( mpi::Comm comm, int height, GridOrder order )
-: haveViewers_(false), order_(order)
-{
-    EL_DEBUG_CSE
-
-    // Extract our rank, the underlying group, and the number of processes
-    mpi::Dup( comm, viewingComm_ );
-    mpi::CommGroup( viewingComm_, viewingGroup_ );
-    size_ = mpi::Size( viewingComm_ );
-
-    // All processes own the grid, so we have to trivially split viewingGroup_
-    owningGroup_ = viewingGroup_;
-
-    height_ = height;
+    height_ = (height <= 0 ? DefaultHeight(size_) : height);
     if( height_ < 0 )
         LogicError("Process grid dimensions must be non-negative");
 
@@ -197,7 +179,7 @@ void Grid::SetUpGrid()
         }
         mpi::AllGather
         ( myDiagAndRank.data(),  2,
-          diagsAndRanks_.data(), 2, vcComm_ );
+          diagsAndRanks_.data(), 2, vcComm_, SyncInfo<Device::CPU>{} );
 
         mpi::Split( cartComm_, mdPerpRank_, mdRank_,     mdComm_     );
         mpi::Split( cartComm_, mdRank_,     mdPerpRank_, mdPerpComm_ );
@@ -213,13 +195,6 @@ void Grid::SetUpGrid()
     }
     else
     {
-        mcComm_     = mpi::COMM_NULL;
-        mrComm_     = mpi::COMM_NULL;
-        mdComm_     = mpi::COMM_NULL;
-        mdPerpComm_ = mpi::COMM_NULL;
-        vcComm_     = mpi::COMM_NULL;
-        vrComm_     = mpi::COMM_NULL;
-
         mcRank_     = mpi::UNDEFINED;
         mrRank_     = mpi::UNDEFINED;
         mdRank_     = mpi::UNDEFINED;
@@ -232,8 +207,10 @@ void Grid::SetUpGrid()
     // Translate the rank of the root process of the owningGroup so that we can
     // broadcast data
     int owningRoot = mpi::Translate( owningGroup_, 0, viewingGroup_ );
-    mpi::Broadcast( vcToViewing_.data(), size_, owningRoot, viewingComm_ );
-    mpi::Broadcast( diagsAndRanks_.data(), 2*size_, owningRoot, viewingComm_ );
+    mpi::Broadcast(vcToViewing_.data(), size_, owningRoot, viewingComm_,
+                   SyncInfo<Device::CPU>{} );
+    mpi::Broadcast(diagsAndRanks_.data(), 2*size_, owningRoot, viewingComm_,
+                   SyncInfo<Device::CPU>{} );
 
 #ifdef EL_HAVE_SCALAPACK
     blacsVCHandle_ = blacs::Handle( vcComm_.comm );
@@ -285,12 +262,12 @@ int Grid::MDPerpSize() const EL_NO_EXCEPT { return gcd_;          }
 int Grid::VCSize()     const EL_NO_EXCEPT { return size_;         }
 int Grid::VRSize()     const EL_NO_EXCEPT { return size_;         }
 
-mpi::Comm Grid::MCComm()     const EL_NO_EXCEPT { return mcComm_;     }
-mpi::Comm Grid::MRComm()     const EL_NO_EXCEPT { return mrComm_;     }
-mpi::Comm Grid::MDComm()     const EL_NO_EXCEPT { return mdComm_;     }
-mpi::Comm Grid::MDPerpComm() const EL_NO_EXCEPT { return mdPerpComm_; }
-mpi::Comm Grid::VCComm()     const EL_NO_EXCEPT { return vcComm_;     }
-mpi::Comm Grid::VRComm()     const EL_NO_EXCEPT { return vrComm_;     }
+mpi::Comm const& Grid::MCComm()     const EL_NO_EXCEPT { return mcComm_;     }
+mpi::Comm const& Grid::MRComm()     const EL_NO_EXCEPT { return mrComm_;     }
+mpi::Comm const& Grid::MDComm()     const EL_NO_EXCEPT { return mdComm_;     }
+mpi::Comm const& Grid::MDPerpComm() const EL_NO_EXCEPT { return mdPerpComm_; }
+mpi::Comm const& Grid::VCComm()     const EL_NO_EXCEPT { return vcComm_;     }
+mpi::Comm const& Grid::VRComm()     const EL_NO_EXCEPT { return vrComm_;     }
 
 // Provided for simplicity, but redundant
 // ======================================
@@ -303,9 +280,9 @@ GridOrder Grid::Order() const EL_NO_EXCEPT { return order_; }
 
 int Grid::Row() const EL_NO_RELEASE_EXCEPT { return MCRank(); }
 int Grid::Col() const EL_NO_RELEASE_EXCEPT { return MRRank(); }
-mpi::Comm Grid::ColComm() const EL_NO_EXCEPT { return MCComm(); }
-mpi::Comm Grid::RowComm() const EL_NO_EXCEPT { return MRComm(); }
-mpi::Comm Grid::Comm() const EL_NO_EXCEPT
+mpi::Comm const& Grid::ColComm() const EL_NO_EXCEPT { return MCComm(); }
+mpi::Comm const& Grid::RowComm() const EL_NO_EXCEPT { return MRComm(); }
+mpi::Comm const& Grid::Comm() const EL_NO_EXCEPT
 { return ( order_==COLUMN_MAJOR ? VCComm() : VRComm() ); }
 
 // Advanced routines
@@ -313,12 +290,12 @@ mpi::Comm Grid::Comm() const EL_NO_EXCEPT
 
 // Currently forces a columnMajor absolute rank on the grid
 Grid::Grid( mpi::Comm viewers, mpi::Group owners, int height, GridOrder order )
-: haveViewers_(true), order_(order)
+    : haveViewers_(true), order_(order),
+      viewingComm_{std::move(viewers)}
 {
     EL_DEBUG_CSE
 
     // Extract our rank and the underlying group from the viewing comm
-    mpi::Dup( viewers, viewingComm_ );
     mpi::CommGroup( viewingComm_, viewingGroup_ );
 
     // Extract our rank and the number of processes from the owning group
@@ -414,8 +391,8 @@ int Grid::VCToViewing( int vcRank ) const EL_NO_EXCEPT
 { return vcToViewing_[vcRank]; }
 
 mpi::Group Grid::OwningGroup() const EL_NO_EXCEPT { return owningGroup_; }
-mpi::Comm Grid::OwningComm()  const EL_NO_EXCEPT { return owningComm_; }
-mpi::Comm Grid::ViewingComm() const EL_NO_EXCEPT { return viewingComm_; }
+mpi::Comm const& Grid::OwningComm()  const EL_NO_EXCEPT { return owningComm_; }
+mpi::Comm const& Grid::ViewingComm() const EL_NO_EXCEPT { return viewingComm_; }
 
 int Grid::Diag() const EL_NO_RELEASE_EXCEPT
 {

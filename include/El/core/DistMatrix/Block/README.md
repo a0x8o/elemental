@@ -52,7 +52,7 @@ process grid into a 4D mesh: `ColComm` x `RowComm` x `RedundantComm` x `CrossCom
 We are now ready to describe the contents of this folder (in addition to this
 file):
 
--  `Abstract.hpp`: The underlying distribution-agnostic base class
+-  `AbstractDistMatrix.hpp`: The underlying distribution-agnostic base class
 -  `CIRC_CIRC.hpp`: The `<T,CIRC,CIRC>` specialization, which provides a
    distributed matrix where only one process owns data. It provides a simple
    mechanism for forming a matrix on a single process and then redistributing

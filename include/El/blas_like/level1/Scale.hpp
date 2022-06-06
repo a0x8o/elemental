@@ -9,12 +9,40 @@
 #ifndef EL_BLAS_SCALE_HPP
 #define EL_BLAS_SCALE_HPP
 
-namespace El {
 
-template<typename T,typename S>
-void Scale( S alphaS, Matrix<T>& A )
+namespace El
 {
-    EL_DEBUG_CSE
+
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T, typename=EnableIf<IsComputeType<T,Device::GPU>>>
+void Scale(T const& alpha, Matrix<T,Device::GPU>& A)
+{
+    if( alpha == TypeTraits<T>::Zero() )
+    {
+        Zero(A);
+    }
+    else if( alpha != TypeTraits<T>::One() )
+    {
+        gpu_blas::Scale(A.Height(), A.Width(), alpha,
+                        A.Buffer(), A.LDim(),
+                        SyncInfoFromMatrix(A));
+    }
+}
+
+template <typename T,
+          typename=DisableIf<IsComputeType<T,Device::GPU>>,
+          typename=void>
+void Scale(T const&, Matrix<T,Device::GPU>&)
+{
+    LogicError("Scale: Bad device/type combo!");
+}
+#endif // HYDROGEN_HAVE_GPU
+
+template <typename T, typename S,
+          typename=EnableIf<IsComputeType<T,Device::CPU>>>
+void Scale(S alphaS, Matrix<T,Device::CPU>& A)
+{
+    EL_DEBUG_CSE;
     const T alpha = T(alphaS);
 
     const Int ALDim = A.LDim();
@@ -22,26 +50,25 @@ void Scale( S alphaS, Matrix<T>& A )
     const Int width = A.Width();
     T* ABuf = A.Buffer();
 
-    // TODO(poulson): Use imatcopy if MKL or OpenBLAS is detected
-
-    if( alpha == T(0) )
+    if( alpha == TypeTraits<T>::Zero() )
     {
         Zero( A );
     }
-    else if( alpha != T(1) )
+    else if ( alpha != TypeTraits<T>::One() )
     {
-        if( ALDim == height )
+        if( A.Contiguous() )
         {
             EL_PARALLEL_FOR
             for( Int i=0; i<height*width; ++i )
+            {
                 ABuf[i] *= alpha;
+            }
         }
         else
         {
-            EL_PARALLEL_FOR
+            EL_PARALLEL_FOR_COLLAPSE2
             for( Int j=0; j<width; ++j )
             {
-                EL_SIMD
                 for( Int i=0; i<height; ++i )
                 {
                     ABuf[i+j*ALDim] *= alpha;
@@ -50,14 +77,48 @@ void Scale( S alphaS, Matrix<T>& A )
         }
     }
 }
+template <typename T, typename S,
+          typename=DisableIf<IsComputeType<T,Device::CPU>>,
+          typename=void>
+void Scale(S, Matrix<T,Device::CPU>&)
+{
+    LogicError("Scale: Bad device/type combo!");
+}
+
+template<typename T,typename S>
+void Scale( S alphaS, AbstractMatrix<T>& A )
+{
+    EL_DEBUG_CSE;
+    const T alpha = T(alphaS);
+
+    if( alpha == TypeTraits<T>::Zero() )
+    {
+        Zero(A);
+    }
+    else if( alpha != TypeTraits<T>::One() )
+    {
+        switch (A.GetDevice())
+        {
+        case Device::CPU:
+            Scale(alpha, static_cast<Matrix<T,Device::CPU>&>(A));
+            break;
+#ifdef HYDROGEN_HAVE_GPU
+        case Device::GPU:
+            Scale(alpha, static_cast<Matrix<T,Device::GPU>&>(A));
+            break;
+#endif // HYDROGEN_HAVE_GPU
+        default:
+            LogicError("Bad device type in Scale");
+        }
+    }
+
+}
 
 template<typename Real,typename S,typename>
-void Scale( S alphaS, Matrix<Real>& AReal, Matrix<Real>& AImag )
+void Scale( S alphaS, AbstractMatrix<Real>& AReal, AbstractMatrix<Real>& AImag )
 {
-    EL_DEBUG_CSE
+    EL_DEBUG_CSE;
     typedef Complex<Real> C;
-    const Int m = AReal.Height();
-    const Int n = AReal.Width();
     const C alpha = C(alphaS);
     if( alpha != C(1) )
     {
@@ -94,55 +155,6 @@ void Scale( S alpha, AbstractDistMatrix<Real>& AReal,
     Scale( alpha, AReal.Matrix(), AImag.Matrix() );
 }
 
-template<typename T,typename S>
-void Scale( S alpha, SparseMatrix<T>& A )
-{
-    EL_DEBUG_CSE
-    if( alpha == S(0) )
-    {
-        const Int m = A.Height();
-        const Int n = A.Width();
-        A.Empty();
-        A.Resize( m, n );
-    }
-    else if( alpha != S(1) )
-    {
-        T alphaT = alpha;
-        T* valueBuf = A.ValueBuffer();
-        const Int numEntries = A.NumEntries();
-        for( Int k=0; k<numEntries; ++k )
-            valueBuf[k] *= alphaT;
-    }
-}
-
-template<typename T,typename S>
-void Scale( S alpha, DistSparseMatrix<T>& A )
-{
-    EL_DEBUG_CSE
-    if( alpha == S(0) )
-    {
-        const Int m = A.Height();
-        const Int n = A.Width();
-        A.Empty();
-        A.Resize( m, n );
-    }
-    else if( alpha != S(1) )
-    {
-        T alphaT = alpha;
-        T* valueBuf = A.ValueBuffer();
-        const Int numLocalEntries = A.NumLocalEntries();
-        for( Int k=0; k<numLocalEntries; ++k )
-            valueBuf[k] *= alphaT;
-    }
-}
-
-template<typename T,typename S>
-void Scale( S alpha, DistMultiVec<T>& A )
-{
-    EL_DEBUG_CSE
-    Scale( alpha, A.Matrix() );
-}
-
 #ifdef EL_INSTANTIATE_BLAS_LEVEL1
 # define EL_EXTERN
 #else
@@ -151,16 +163,15 @@ void Scale( S alpha, DistMultiVec<T>& A )
 
 #define PROTO(T) \
   EL_EXTERN template void Scale \
-  ( T alpha, Matrix<T>& A ); \
+  ( T alpha, AbstractMatrix<T>& A ); \
   EL_EXTERN template void Scale \
-  ( T alpha, AbstractDistMatrix<T>& A ); \
-  EL_EXTERN template void Scale \
-  ( T alpha, SparseMatrix<T>& A ); \
-  EL_EXTERN template void Scale \
-  ( T alpha, DistSparseMatrix<T>& A ); \
-  EL_EXTERN template void Scale \
-  ( T alpha, DistMultiVec<T>& A );
+  ( T alpha, AbstractDistMatrix<T>& A );
 
+#ifdef HYDROGEN_GPU_USE_FP16
+PROTO(gpu_half_type)
+#endif // HYDROGEN_GPU_USE_FP16
+
+#define EL_ENABLE_HALF
 #define EL_ENABLE_DOUBLEDOUBLE
 #define EL_ENABLE_QUADDOUBLE
 #define EL_ENABLE_QUAD
