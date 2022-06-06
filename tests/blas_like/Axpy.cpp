@@ -87,16 +87,8 @@ void TestAxpy
     double runTime, gflops;
     Timer timer;
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
 #ifdef _OPENMP
     if(numThreads > 0)
-=======
->>>>>>> LLNL-hydrogen
-#ifdef EL_HYBRID
-    if( numThreads > 0 )
->>>>>>> f46681a4a (Enable OpenMP code only if EL_HYBRID is set)
     {
         omp_set_num_threads(numThreads);
     }
