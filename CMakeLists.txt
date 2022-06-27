@@ -358,6 +358,9 @@ if (Hydrogen_ENABLE_ROCM)
   find_package(rocsolver CONFIG REQUIRED)
   find_package(rocthrust CONFIG REQUIRED)
 
+  include(HydrogenCleanupHIPTargets)
+  h_clean_hip_targets()
+
   set(HYDROGEN_HAVE_ROCM TRUE)
   message(STATUS "Found ROCm/HIP toolchain. Using HIP/ROCm.")
 

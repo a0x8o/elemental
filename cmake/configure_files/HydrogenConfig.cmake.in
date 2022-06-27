@@ -106,6 +106,10 @@ if (_HYDROGEN_HAVE_ROCM)
   find_dependency(rocblas CONFIG)
   find_dependency(rocsolver CONFIG)
   find_dependency(rocthrust CONFIG)
+
+  include(HydrogenCleanupHIPTargets)
+  h_clean_hip_targets()
+
   set(HYDROGEN_HAVE_ROCM TRUE)
 endif (_HYDROGEN_HAVE_ROCM)
 
