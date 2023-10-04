@@ -133,8 +133,11 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
+<<<<<<< HEAD
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
+=======
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
