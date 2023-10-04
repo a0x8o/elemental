@@ -51,7 +51,11 @@ endif (__GIT_EXECUTABLE)
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
 set(HYDROGEN_VERSION_MINOR 5)
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -440,8 +444,50 @@ if (Aluminum_FOUND)
     set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
   endif ()
 
+<<<<<<< HEAD
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
+=======
+  if (Aluminum_FOUND)
+    set(HYDROGEN_HAVE_ALUMINUM TRUE)
+    message(STATUS
+      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+      set(HYDROGEN_HAVE_NCCL2 TRUE)
+      message(STATUS "Aluminum detected with NCCL2 backend support.")
+    else ()
+      set(HYDROGEN_HAVE_NCCL2 FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+      message(STATUS "Aluminum detected with HostTransfer backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+      set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
+      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+
+    # Check for in-place SendRecv.
+    if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
+    else ()
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
+    endif ()
+
+    if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
+      message(STATUS "Aluminum detected with in-place SendRecv support.")
+    else ()
+      message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
+    endif ()
+
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()

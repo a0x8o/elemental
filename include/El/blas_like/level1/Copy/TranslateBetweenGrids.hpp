@@ -3890,12 +3890,25 @@ void TranslateBetweenGrids(
   Int strideA = A.RowStride();
   Int ALDim = A.LDim();
 
+<<<<<<< HEAD
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
   bool const inAGrid = A.Participating();
   bool const inBGrid = B.Participating();
 
   Int recvMetaData[4];
   Int metaData[4];
+=======
+  // Create A metadata
+  Int recvMetaData[4];
+  Int metaData[4];
+
+  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
+
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
   if(inAGrid)
   {
     metaData[0] = m;
@@ -3911,6 +3924,7 @@ void TranslateBetweenGrids(
     metaData[3] = 0;
   }
   const std::vector<Int> sendMetaData (metaData, metaData + 4);
+<<<<<<< HEAD
   mpi::AllReduce(sendMetaData.data(),
                  recvMetaData,
                  4,
@@ -3918,11 +3932,18 @@ void TranslateBetweenGrids(
                  viewingCommB,
                  SyncInfo<El::Device::CPU>{});
 
+=======
+  mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
