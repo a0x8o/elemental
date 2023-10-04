@@ -74,6 +74,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -118,6 +119,8 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> d12114d83 (Update the event creation flags under HIP (#161))
 =======
 >>>>>>> 8a6ab89e9 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -210,7 +213,12 @@ set(HYDROGEN_VERSION_PATCH 4)
 =======
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+<<<<<<< HEAD
 >>>>>>> 8a6ab89e9 (Add debugging annotations to the MemoryPool (#141))
+=======
+=======
+>>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+>>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -285,6 +293,8 @@ set(HYDROGEN_VERSION_PATCH 4)
 =======
 =======
 >>>>>>> e919fe5d4 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 03a5a8211 (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -301,9 +311,24 @@ set(HYDROGEN_VERSION_PATCH 3)
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
+<<<<<<< HEAD
 >>>>>>> e919fe5d4 (Add debugging annotations to the MemoryPool (#141))
+<<<<<<< HEAD
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+<<<<<<< HEAD
 >>>>>>> 8a6ab89e9 (Add debugging annotations to the MemoryPool (#141))
+=======
+=======
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> 7649d6e7e (Update the event creation flags under HIP (#161))
+>>>>>>> b5922d5cb (Update the event creation flags under HIP (#161))
+>>>>>>> 03a5a8211 (Update the event creation flags under HIP (#161))
+>>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+>>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
