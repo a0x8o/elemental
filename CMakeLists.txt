@@ -64,6 +64,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -88,10 +89,13 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> f04c0c432 (Update the event creation flags under HIP (#161))
 =======
 >>>>>>> 7c5c87299 (Update ElementalREADME.md)
+=======
+>>>>>>> d60c96fe9 (Add debugging annotations to the MemoryPool (#141))
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 060e12ec1 (Update the event creation flags under HIP (#161))
 =======
@@ -169,6 +173,11 @@ set(HYDROGEN_VERSION_PATCH 4)
 set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
 >>>>>>> d5211d429 (Update the event creation flags under HIP (#161))
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
+>>>>>>> d60c96fe9 (Add debugging annotations to the MemoryPool (#141))
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
