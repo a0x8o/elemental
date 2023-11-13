@@ -167,7 +167,6 @@ using RealType = typename RealTypeT<T>::type;
 #define ADD_NRM2_IMPL(ScalarType, TypeChar)                     \
     void Nrm2(cublasHandle_t handle,                            \
               int n, ScalarType const* X, int incx,             \
-              ScalarType const* Y, int incy,                    \
               RealType<ScalarType>* output)                     \
     {                                                           \
         H_CHECK_CUBLAS(                                         \
