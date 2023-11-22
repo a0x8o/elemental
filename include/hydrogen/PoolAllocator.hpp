@@ -584,7 +584,11 @@ struct PooledDeviceAllocator {
         } else {
           const gpuError_t event_status = gpuEventQuery(block_itr->ready_event);
           if (event_status != gpuErrorNotReady) {
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
+=======
+            gpuDebug(event_status);
+>>>>>>> 53eb7a1b9 (Add debugging annotations to the MemoryPool (#141))
             is_reusable = true;
           }
         }
@@ -643,7 +647,11 @@ struct PooledDeviceAllocator {
                  (long long)search_key.associated_stream);
 
         error = gpuSuccess; // Reset the error we will return
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
+=======
+        gpuGetLastError();  // Reset error
+>>>>>>> 53eb7a1b9 (Add debugging annotations to the MemoryPool (#141))
 
         // Lock
         mutex.lock();
@@ -933,7 +941,11 @@ struct PooledDeviceAllocator {
    */
   virtual ~PooledDeviceAllocator() {
     if (!skip_cleanup)
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
+=======
+      FreeAllCached();
+>>>>>>> 53eb7a1b9 (Add debugging annotations to the MemoryPool (#141))
   }
 
   /* Inspection and reporting methods */
