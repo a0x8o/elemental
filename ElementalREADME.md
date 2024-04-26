@@ -1,10 +1,3 @@
-<p align="left" style="padding: 20px">
-<img src="http://libelemental.org/_static/elemental.png">
-</p>
-
-[![Build Status](https://api.travis-ci.org/elemental/Elemental.svg?branch=master)](https://travis-ci.org/elemental/Elemental)
-[![Join the chat at https://gitter.im/elemental/chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/elemental/chat?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 **Elemental** is a modern C++ library for distributed-memory dense and
 sparse-direct linear algebra, conic optimization, and lattice reduction.
 The library was initially released in
@@ -15,7 +8,7 @@ was originally released during a project on [Parallel Sweeping Preconditioners](
 
 ### Documentation
 
-The (now outdated) [documentation for Elemental](http://libelemental.org/documentation) is built using [Sphinx](http://sphinx.pocoo.org) and the [Read the Docs Theme](http://docs.readthedocs.org/en/latest/theme.html)
+The (now outdated) documentation for Elemental is built using [Sphinx](http://sphinx.pocoo.org) and the [Read the Docs Theme](http://docs.readthedocs.org/en/latest/theme.html)
 
 ### Unique features
 
