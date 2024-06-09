@@ -75,6 +75,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -121,6 +122,8 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 8a6ab89e9 (Add debugging annotations to the MemoryPool (#141))
 =======
 >>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> 30c9975e4 (Update ElementalREADME.md)
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -218,7 +221,12 @@ set(HYDROGEN_VERSION_PATCH 4)
 =======
 =======
 >>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 >>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
+=======
+=======
+>>>>>>> aa9c39036 (Update ElementalREADME.md)
+>>>>>>> 30c9975e4 (Update ElementalREADME.md)
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -295,6 +303,8 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> e919fe5d4 (Add debugging annotations to the MemoryPool (#141))
 =======
 >>>>>>> 03a5a8211 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> 646000cd3 (Update ElementalREADME.md)
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -326,9 +336,21 @@ set(HYDROGEN_VERSION_PATCH 4)
 set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> 7649d6e7e (Update the event creation flags under HIP (#161))
 >>>>>>> b5922d5cb (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 >>>>>>> 03a5a8211 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 >>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 >>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
+=======
+=======
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 73b31a5ca (Update ElementalREADME.md)
+>>>>>>> 646000cd3 (Update ElementalREADME.md)
+>>>>>>> aa9c39036 (Update ElementalREADME.md)
+>>>>>>> 30c9975e4 (Update ElementalREADME.md)
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
