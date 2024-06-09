@@ -586,6 +586,7 @@ struct PooledDeviceAllocator {
           if (event_status != gpuErrorNotReady) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
 =======
             gpuDebug(event_status);
@@ -593,6 +594,12 @@ struct PooledDeviceAllocator {
 =======
             gpuDebug(event_status);
 >>>>>>> e63ee34fa (Add debugging annotations to the MemoryPool (#141))
+=======
+            static_cast<void>(gpuDebug(event_status));
+=======
+            gpuDebug(event_status);
+>>>>>>> 6a4ca4751 (Update ElementalREADME.md)
+>>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
             is_reusable = true;
           }
         }
@@ -653,6 +660,7 @@ struct PooledDeviceAllocator {
         error = gpuSuccess; // Reset the error we will return
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
 =======
         gpuGetLastError();  // Reset error
@@ -660,6 +668,12 @@ struct PooledDeviceAllocator {
 =======
         gpuGetLastError();  // Reset error
 >>>>>>> e63ee34fa (Add debugging annotations to the MemoryPool (#141))
+=======
+        static_cast<void>(gpuGetLastError());  // Reset error
+=======
+        gpuGetLastError();  // Reset error
+>>>>>>> 6a4ca4751 (Update ElementalREADME.md)
+>>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
 
         // Lock
         mutex.lock();
@@ -951,6 +965,7 @@ struct PooledDeviceAllocator {
     if (!skip_cleanup)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
 =======
       FreeAllCached();
@@ -958,6 +973,12 @@ struct PooledDeviceAllocator {
 =======
       FreeAllCached();
 >>>>>>> e63ee34fa (Add debugging annotations to the MemoryPool (#141))
+=======
+      static_cast<void>(FreeAllCached());
+=======
+      FreeAllCached();
+>>>>>>> 6a4ca4751 (Update ElementalREADME.md)
+>>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
   }
 
   /* Inspection and reporting methods */
