@@ -51,7 +51,15 @@ endif (__GIT_EXECUTABLE)
 # This must be set because version tags
 set(HYDROGEN_VERSION_MAJOR 1)
 set(HYDROGEN_VERSION_MINOR 5)
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
+=======
+<<<<<<< HEAD
+set(HYDROGEN_VERSION_PATCH 3)
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> develop
+>>>>>>> stage
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
