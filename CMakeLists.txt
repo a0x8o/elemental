@@ -138,10 +138,6 @@ endif ()
 # Feature-related options
 include(CMakeDependentOption)
 
-option(Hydrogen_ENABLE_ALUMINUM
-  "Enable the Aluminum package for improved device-side communication."
-  OFF)
-
 option(Hydrogen_ENABLE_CUDA
   "Search for CUDA support and enable related features if found."
   OFF)
@@ -428,70 +424,70 @@ if (HYDROGEN_HAVE_CUDA OR HYDROGEN_HAVE_ROCM)
   endif ()
 endif ()
 
-if (Hydrogen_ENABLE_ALUMINUM)
-  find_package(Aluminum 1.0.0 CONFIG QUIET)
+find_package(Aluminum 1.0.0 CONFIG QUIET)
+if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
+  message(STATUS
+    "A candidate Aluminum > v1.0.0 was found, but was not selected:")
+  message(STATUS
+    "  ${Aluminum_NOT_FOUND_MESSAGE}")
+endif ()
+# Try again, since we're technically ok with >v0.7.0
+if (NOT Aluminum_FOUND)
+  find_package(Aluminum 0.7.0 CONFIG QUIET)
   if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
     message(STATUS
-      "A candidate Aluminum > v1.0.0 was found, but was not selected:")
+      "A candidate Aluminum > v0.7.0 was found, but was not selected:")
     message(STATUS
       "  ${Aluminum_NOT_FOUND_MESSAGE}")
   endif ()
-  # Try again, since we're technically ok with >v0.7.0
-  if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.7.0 CONFIG QUIET)
-    if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
-      message(STATUS
-        "A candidate Aluminum > v0.7.0 was found, but was not selected:")
-      message(STATUS
-        "  ${Aluminum_NOT_FOUND_MESSAGE}")
-    endif ()
+endif ()
+
+if (Aluminum_FOUND)
+  set(HYDROGEN_HAVE_ALUMINUM TRUE)
+  message(STATUS
+    "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+
+  if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+    set(HYDROGEN_HAVE_NCCL2 TRUE)
+    message(STATUS "Aluminum detected with NCCL2 backend support.")
+  else ()
+    set(HYDROGEN_HAVE_NCCL2 FALSE)
+  endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+
+  if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+    set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+    message(STATUS "Aluminum detected with HostTransfer backend support.")
+  else ()
+    set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+  endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+
+  if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+    set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
+    message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+  else ()
+    set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
+  endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+
+  # Check for in-place SendRecv.
+  if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
+    set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
+  else ()
+    set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
   endif ()
 
-  if (Aluminum_FOUND)
-    set(HYDROGEN_HAVE_ALUMINUM TRUE)
-    message(STATUS
-      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
-
-    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
-      set(HYDROGEN_HAVE_NCCL2 TRUE)
-      message(STATUS "Aluminum detected with NCCL2 backend support.")
-    else ()
-      set(HYDROGEN_HAVE_NCCL2 FALSE)
-    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
-
-    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
-      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
-      message(STATUS "Aluminum detected with HostTransfer backend support.")
-    else ()
-      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
-    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
-
-    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
-      set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
-      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
-    else ()
-      set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
-    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
-
-    # Check for in-place SendRecv.
-    if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
-      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
-    else ()
-      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
-    endif ()
-
-    if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
-      message(STATUS "Aluminum detected with in-place SendRecv support.")
-    else ()
-      message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
-    endif ()
-
+  if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
+    message(STATUS "Aluminum detected with in-place SendRecv support.")
   else ()
-    message(FATAL_ERROR "Aluminum support requested but not found. "
-      "Please set Aluminum_DIR to point to the installation prefix "
-      "for Aluminum.")
-  endif (Aluminum_FOUND)
-endif (Hydrogen_ENABLE_ALUMINUM)
+    message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
+  endif ()
+
+else ()
+
+  message(FATAL_ERROR "Aluminum support required but not found. "
+    "Please set Aluminum_ROOT to its installation prefix or add "
+    "the installation prefix to CMAKE_PREFIX_PATH.")
+
+endif (Aluminum_FOUND)
 
 # Sets up EL_RESTRICT and EL_HAVE_PRETTY_FUNCTION
 include(detect/CXX)
@@ -550,7 +546,7 @@ add_subdirectory(src)
 # docs (which has the advantage that preprocessing will take
 # "{,hydrogen_}config.h" into consideration).
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/config.h.in"
-  "${PROJECT_BINARY_DIR}/include/El/config.h")
+  "${PROJECT_BINARY_DIR}/include/El/config.h" ESCAPE_QUOTES)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/configure_files/hydrogen_config.h.in"
   "${PROJECT_BINARY_DIR}/include/El/hydrogen_config.h")
 configure_file("${PROJECT_SOURCE_DIR}/doxy/Doxyfile.in"
