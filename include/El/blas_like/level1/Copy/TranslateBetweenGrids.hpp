@@ -10,6 +10,8 @@
 #define EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
 
 #include "core/environment/decl.hpp"
+#include <optional>
+
 namespace El
 {
 namespace copy
@@ -3562,7 +3564,6 @@ void TranslateBetweenGridsAsync
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-
     mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
     mpi::Group owningGroupA = A.Grid().OwningGroup();
 
@@ -3889,43 +3890,15 @@ void TranslateBetweenGrids(
   Int strideA = A.RowStride();
   Int ALDim = A.LDim();
 
-  // Create A metadata
-  Int recvMetaData[4];
-  Int metaData[4];
-
-  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-
-  const bool inAGrid = A.Participating();
-  const bool inBGrid = B.Participating();
-
-  if(inAGrid)
-  {
-    metaData[0] = m;
-    metaData[1] = n;
-    metaData[2] = strideA;
-    metaData[3] = ALDim;
-  }
-  else
-  {
-    metaData[0] = 0;
-    metaData[1] = 0;
-    metaData[2] = 0;
-    metaData[3] = 0;
-  }
-  const std::vector<Int> sendMetaData (metaData, metaData + 4);
-  mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
-  m = recvMetaData[0];
-  n = recvMetaData[1];
-  strideA = recvMetaData[2];
-  ALDim =recvMetaData[3];
-
 
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
 
   // Return immediately if there is no local data
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
   if (!inAGrid && !inBGrid) {
     return;
   }
@@ -3939,8 +3912,15 @@ void TranslateBetweenGrids(
   // Synchronize compute streams
   SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
   SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
-  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
-  const SyncInfo<D>& syncInfo = syncHelper;
+
+  std::optional<MultiSync<D, D>> maybeMultiSync;
+  if (inAGrid && inBGrid)
+      maybeMultiSync.emplace(syncInfoB, syncInfoA);
+
+  SyncInfo<D> const syncInfo =
+      (maybeMultiSync.has_value()
+       ? *maybeMultiSync
+       : (inAGrid ? syncInfoA : syncInfoB));
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
