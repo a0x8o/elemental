@@ -3893,6 +3893,7 @@ void TranslateBetweenGrids(
 <<<<<<< HEAD
 <<<<<<< HEAD
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
   bool const inAGrid = A.Participating();
   bool const inBGrid = B.Participating();
 
@@ -4015,6 +4016,10 @@ void TranslateBetweenGrids(
   mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
 =======
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+
+  // Collective!
+  mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
+  mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
