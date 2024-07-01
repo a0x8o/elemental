@@ -3891,6 +3891,10 @@ void TranslateBetweenGrids(
   Int ALDim = A.LDim();
 
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+<<<<<<< HEAD
+=======
+
+>>>>>>> fe19d9fcd (Add an EnsureComm call to make sure things are sane (#182))
   bool const inAGrid = A.Participating();
   bool const inBGrid = B.Participating();
 
@@ -3950,6 +3954,13 @@ void TranslateBetweenGrids(
       (maybeMultiSync.has_value()
        ? *maybeMultiSync
        : (inAGrid ? syncInfoA : syncInfoB));
+<<<<<<< HEAD
+=======
+
+  // Collective!
+  mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
+  mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
+>>>>>>> fe19d9fcd (Add an EnsureComm call to make sure things are sane (#182))
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
