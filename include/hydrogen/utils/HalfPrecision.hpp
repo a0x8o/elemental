@@ -103,16 +103,8 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 // Grab the right header
 #if defined(HYDROGEN_HAVE_CUDA)
 #include <cuda_fp16.h>
-<<<<<<< HEAD
-<<<<<<< HEAD
 // Needed for CUDA_VERSION
 #include <cuda.h>
-=======
->>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
-=======
-// Needed for CUDA_VERSION
-#include <cuda.h>
->>>>>>> dd12dadcf (Add debugging annotations to the MemoryPool (#141))
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hip/hip_fp16.h>
 #endif // HYDROGEN_HAVE_CUDA
@@ -137,15 +129,7 @@ struct TypeTraits<gpu_half_type>
 
 }// namespace hydrogen
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
-=======
-#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
->>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
-=======
-#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
->>>>>>> dd12dadcf (Add debugging annotations to the MemoryPool (#141))
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
@@ -255,15 +239,7 @@ inline bool operator!=(
     return !(x == y);
 }
 #endif // defined(HYDROGEN_HAVE_ROCM)
-<<<<<<< HEAD
-<<<<<<< HEAD
 #endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
-=======
-#endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
->>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
-=======
-#endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
->>>>>>> dd12dadcf (Add debugging annotations to the MemoryPool (#141))
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
 {
