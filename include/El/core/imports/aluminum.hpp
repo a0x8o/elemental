@@ -135,18 +135,6 @@ ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
->>>>>>> a0x8o
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
