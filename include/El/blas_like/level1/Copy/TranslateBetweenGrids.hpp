@@ -10,6 +10,8 @@
 #define EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
 
 #include "core/environment/decl.hpp"
+#include <optional>
+
 namespace El
 {
 namespace copy
@@ -3562,7 +3564,6 @@ void TranslateBetweenGridsAsync
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-
     mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
     mpi::Group owningGroupA = A.Grid().OwningGroup();
 
@@ -3889,6 +3890,15 @@ void TranslateBetweenGrids(
   Int strideA = A.RowStride();
   Int ALDim = A.LDim();
 
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+  bool const inAGrid = A.Participating();
+  bool const inBGrid = B.Participating();
+
+  Int recvMetaData[4];
+  Int metaData[4];
+<<<<<<< HEAD
+=======
   // Create A metadata
   Int recvMetaData[4];
   Int metaData[4];
@@ -3899,6 +3909,13 @@ void TranslateBetweenGrids(
   const bool inAGrid = A.Participating();
   const bool inBGrid = B.Participating();
 
+<<<<<<< HEAD
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
   if(inAGrid)
   {
     metaData[0] = m;
@@ -3914,13 +3931,39 @@ void TranslateBetweenGrids(
     metaData[3] = 0;
   }
   const std::vector<Int> sendMetaData (metaData, metaData + 4);
+  mpi::AllReduce(sendMetaData.data(),
+                 recvMetaData,
+                 4,
+                 mpi::MAX,
+                 viewingCommB,
+                 SyncInfo<El::Device::CPU>{});
+
+<<<<<<< HEAD
+=======
   mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
+<<<<<<< HEAD
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
 
+<<<<<<< HEAD
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
@@ -3939,8 +3982,19 @@ void TranslateBetweenGrids(
   // Synchronize compute streams
   SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
   SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
-  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
-  const SyncInfo<D>& syncInfo = syncHelper;
+
+  std::optional<MultiSync<D, D>> maybeMultiSync;
+  if (inAGrid && inBGrid)
+      maybeMultiSync.emplace(syncInfoB, syncInfoA);
+
+  SyncInfo<D> const syncInfo =
+      (maybeMultiSync.has_value()
+       ? *maybeMultiSync
+       : (inAGrid ? syncInfoA : syncInfoB));
+
+  // Collective!
+  mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
+  mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
