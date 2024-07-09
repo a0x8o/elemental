@@ -82,6 +82,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -167,10 +168,23 @@ set(HYDROGEN_VERSION_PATCH 4)
 =======
 >>>>>>> c16a3677e (Update ElementalREADME.md)
 >>>>>>> b5b490311 (Update ElementalREADME.md)
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
+=======
+=======
+>>>>>>> c16a3677e (Update ElementalREADME.md)
+>>>>>>> develop
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> 7649d6e7e (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -187,6 +201,12 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 646000cd3 (Update ElementalREADME.md)
 =======
 =======
+>>>>>>> b5922d5cb (Update the event creation flags under HIP (#161))
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 73b31a5ca (Update ElementalREADME.md)
+>>>>>>> develop
+=======
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -194,15 +214,19 @@ set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> 5600a27ad (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 518d14467 (Update the event creation flags under HIP (#161))
 =======
 =======
 >>>>>>> b5b490311 (Update ElementalREADME.md)
 =======
+>>>>>>> develop
+=======
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 3e748e888 (Update ElementalREADME.md)
 >>>>>>> c16a3677e (Update ElementalREADME.md)
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -275,10 +299,39 @@ set(HYDROGEN_VERSION_PATCH 4)
 =======
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 >>>>>>> be301f377 (Add an EnsureComm call to make sure things are sane (#182))
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 56da8535b (Add debugging annotations to the MemoryPool (#141))
+=======
+=======
+>>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
+=======
+>>>>>>> 4ed83e35f (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> aa9c39036 (Update ElementalREADME.md)
+=======
+>>>>>>> a09030a50 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> a41c06cf1 (Update ElementalREADME.md)
+=======
+>>>>>>> 84dc39981 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 64b0bd404 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> a071f1389 (Update ElementalREADME.md)
+=======
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+>>>>>>> develop
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -335,6 +388,8 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
 >>>>>>> d397992ae (Update the event creation flags under HIP (#161))
 =======
+=======
+>>>>>>> develop
 >>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
 =======
 =======
@@ -343,8 +398,11 @@ set(HYDROGEN_VERSION_PATCH 4)
 <<<<<<< HEAD
 >>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ae1791782 (Update ElementalREADME.md)
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -372,8 +430,11 @@ set(HYDROGEN_VERSION_PATCH 3)
 <<<<<<< HEAD
 >>>>>>> 4ed83e35f (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> d12114d83 (Update the event creation flags under HIP (#161))
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -384,8 +445,11 @@ set(HYDROGEN_VERSION_PATCH 4)
 <<<<<<< HEAD
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 8a6ab89e9 (Add debugging annotations to the MemoryPool (#141))
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -402,8 +466,11 @@ set(HYDROGEN_VERSION_PATCH 3)
 <<<<<<< HEAD
 >>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 7945564aa (Update the event creation flags under HIP (#161))
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -414,8 +481,11 @@ set(HYDROGEN_VERSION_PATCH 4)
 <<<<<<< HEAD
 >>>>>>> aa9c39036 (Update ElementalREADME.md)
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 30c9975e4 (Update ElementalREADME.md)
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -429,8 +499,11 @@ set(HYDROGEN_VERSION_PATCH 3)
 <<<<<<< HEAD
 >>>>>>> a09030a50 (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 1e9b12d89 (Update the event creation flags under HIP (#161))
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -443,8 +516,11 @@ set(HYDROGEN_VERSION_PATCH 4)
 <<<<<<< HEAD
 >>>>>>> a41c06cf1 (Update ElementalREADME.md)
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> c66304666 (Update ElementalREADME.md)
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -455,8 +531,11 @@ set(HYDROGEN_VERSION_PATCH 4)
 <<<<<<< HEAD
 >>>>>>> 84dc39981 (Add debugging annotations to the MemoryPool (#141))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 7886b3da7 (Add debugging annotations to the MemoryPool (#141))
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -473,8 +552,11 @@ set(HYDROGEN_VERSION_PATCH 3)
 <<<<<<< HEAD
 >>>>>>> 64b0bd404 (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 4fbfda0d8 (Update the event creation flags under HIP (#161))
 =======
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -486,14 +568,20 @@ set(HYDROGEN_VERSION_PATCH 4)
 <<<<<<< HEAD
 >>>>>>> a071f1389 (Update ElementalREADME.md)
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 964d4b495 (Update ElementalREADME.md)
 =======
+=======
+>>>>>>> develop
 =======
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 628b63bb5 (Add an EnsureComm call to make sure things are sane (#182))
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+<<<<<<< HEAD
 >>>>>>> be301f377 (Add an EnsureComm call to make sure things are sane (#182))
+=======
+>>>>>>> develop
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
