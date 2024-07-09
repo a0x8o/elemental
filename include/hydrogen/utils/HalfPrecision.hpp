@@ -106,6 +106,7 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
 // Needed for CUDA_VERSION
@@ -119,6 +120,10 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 >>>>>>> dd12dadcf (Add debugging annotations to the MemoryPool (#141))
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+=======
+// Needed for CUDA_VERSION
+#include <cuda.h>
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hip/hip_fp16.h>
 #endif // HYDROGEN_HAVE_CUDA
@@ -146,6 +151,7 @@ struct TypeTraits<gpu_half_type>
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
 #if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
@@ -158,6 +164,9 @@ struct TypeTraits<gpu_half_type>
 >>>>>>> dd12dadcf (Add debugging annotations to the MemoryPool (#141))
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+=======
+#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
@@ -270,6 +279,7 @@ inline bool operator!=(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
 #endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
@@ -282,6 +292,9 @@ inline bool operator!=(
 >>>>>>> dd12dadcf (Add debugging annotations to the MemoryPool (#141))
 =======
 >>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+=======
+#endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
 {
