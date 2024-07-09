@@ -3909,7 +3909,11 @@ void TranslateBetweenGrids(
   const bool inAGrid = A.Participating();
   const bool inBGrid = B.Participating();
 
+<<<<<<< HEAD
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
   if(inAGrid)
   {
     metaData[0] = m;
@@ -3935,7 +3939,11 @@ void TranslateBetweenGrids(
 
 =======
   mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
+<<<<<<< HEAD
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
@@ -3944,7 +3952,11 @@ void TranslateBetweenGrids(
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
