@@ -70,6 +70,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -106,6 +107,8 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> b5b490311 (Update ElementalREADME.md)
 =======
 >>>>>>> abdf7cdd7 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> d397992ae (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -176,15 +179,20 @@ set(HYDROGEN_VERSION_PATCH 4)
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 56da8535b (Add debugging annotations to the MemoryPool (#141))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ab2fdc036 (Add debugging annotations to the MemoryPool (#141))
 =======
 =======
 =======
 >>>>>>> 52b87a7b7 (Update ElementalREADME.md)
+=======
+=======
+>>>>>>> d397992ae (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 15cb4f7da (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
@@ -235,6 +243,9 @@ set(HYDROGEN_VERSION_PATCH 3)
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 56da8535b (Add debugging annotations to the MemoryPool (#141))
 >>>>>>> abdf7cdd7 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
+>>>>>>> d397992ae (Update the event creation flags under HIP (#161))
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -666,7 +677,11 @@ if (Aluminum_FOUND)
       message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
     endif ()
 
+<<<<<<< HEAD
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()
