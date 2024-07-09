@@ -63,6 +63,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -70,6 +71,84 @@ set(HYDROGEN_VERSION_PATCH 3)
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 6a4ca4751 (Update ElementalREADME.md)
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
+=======
+=======
+>>>>>>> c16a3677e (Update ElementalREADME.md)
+set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> 7649d6e7e (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
+>>>>>>> b5922d5cb (Update the event creation flags under HIP (#161))
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 73b31a5ca (Update ElementalREADME.md)
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> 7649d6e7e (Update the event creation flags under HIP (#161))
+>>>>>>> 5600a27ad (Update the event creation flags under HIP (#161))
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 3e748e888 (Update ElementalREADME.md)
+>>>>>>> c16a3677e (Update ElementalREADME.md)
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 56da8535b (Add debugging annotations to the MemoryPool (#141))
+=======
+=======
+>>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
+=======
+>>>>>>> 4ed83e35f (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> aa9c39036 (Update ElementalREADME.md)
+=======
+>>>>>>> a09030a50 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> a41c06cf1 (Update ElementalREADME.md)
+=======
+>>>>>>> 84dc39981 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> 64b0bd404 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> a071f1389 (Update ElementalREADME.md)
+=======
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+set(HYDROGEN_VERSION_PATCH 4)
+=======
+set(HYDROGEN_VERSION_PATCH 3)
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 6a4ca4751 (Update ElementalREADME.md)
+<<<<<<< HEAD
+>>>>>>> 1cf0ed8e7 (Update ElementalREADME.md)
+=======
+>>>>>>> develop
 =======
 =======
 >>>>>>> e919fe5d4 (Add debugging annotations to the MemoryPool (#141))
@@ -93,12 +172,24 @@ set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
 >>>>>>> 060e12ec1 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 4ed83e35f (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> develop
 =======
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 0978aac9b (Add debugging annotations to the MemoryPool (#141))
 <<<<<<< HEAD
 >>>>>>> e919fe5d4 (Add debugging annotations to the MemoryPool (#141))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> e22d4d88d (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -111,12 +202,24 @@ set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> b5922d5cb (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
 >>>>>>> 03a5a8211 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 39337d991 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> develop
 =======
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 73b31a5ca (Update ElementalREADME.md)
 <<<<<<< HEAD
 >>>>>>> 646000cd3 (Update ElementalREADME.md)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> aa9c39036 (Update ElementalREADME.md)
+=======
+>>>>>>> develop
 =======
 =======
 set(HYDROGEN_VERSION_PATCH 4)
@@ -126,6 +229,12 @@ set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> 5600a27ad (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
 >>>>>>> 518d14467 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> a09030a50 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -134,12 +243,24 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> c16a3677e (Update ElementalREADME.md)
 <<<<<<< HEAD
 >>>>>>> 8b151ada9 (Update ElementalREADME.md)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> a41c06cf1 (Update ElementalREADME.md)
+=======
+>>>>>>> develop
 =======
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 56da8535b (Add debugging annotations to the MemoryPool (#141))
 <<<<<<< HEAD
 >>>>>>> ab2fdc036 (Add debugging annotations to the MemoryPool (#141))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 84dc39981 (Add debugging annotations to the MemoryPool (#141))
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -152,6 +273,12 @@ set(HYDROGEN_VERSION_PATCH 3)
 >>>>>>> 15cb4f7da (Update the event creation flags under HIP (#161))
 <<<<<<< HEAD
 >>>>>>> f04c0c432 (Update the event creation flags under HIP (#161))
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 64b0bd404 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> develop
 =======
 =======
 =======
@@ -159,9 +286,19 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 6a4ca4751 (Update ElementalREADME.md)
 >>>>>>> 52b87a7b7 (Update ElementalREADME.md)
 >>>>>>> 7c5c87299 (Update ElementalREADME.md)
+<<<<<<< HEAD
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> 628b63bb5 (Add an EnsureComm call to make sure things are sane (#182))
+=======
+<<<<<<< HEAD
+>>>>>>> a071f1389 (Update ElementalREADME.md)
+=======
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> 628b63bb5 (Add an EnsureComm call to make sure things are sane (#182))
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+>>>>>>> develop
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -552,6 +689,57 @@ if (Aluminum_FOUND)
 
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+  if (Aluminum_FOUND)
+    set(HYDROGEN_HAVE_ALUMINUM TRUE)
+    message(STATUS
+      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+      set(HYDROGEN_HAVE_NCCL2 TRUE)
+      message(STATUS "Aluminum detected with NCCL2 backend support.")
+    else ()
+      set(HYDROGEN_HAVE_NCCL2 FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+      message(STATUS "Aluminum detected with HostTransfer backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+      set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
+      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+
+    # Check for in-place SendRecv.
+    if (ALUMINUM_VERSION VERSION_GREATER_EQUAL "1.3.0")
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV TRUE)
+    else ()
+      set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
+    endif ()
+
+    if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
+      message(STATUS "Aluminum detected with in-place SendRecv support.")
+    else ()
+      message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
+    endif ()
+
+<<<<<<< HEAD
+>>>>>>> d66388614 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
+>>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
+=======
+>>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+>>>>>>> develop
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()
