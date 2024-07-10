@@ -3900,6 +3900,7 @@ void TranslateBetweenGrids(
   Int recvMetaData[4];
   Int metaData[4];
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   // Create A metadata
   Int recvMetaData[4];
@@ -3924,8 +3925,13 @@ void TranslateBetweenGrids(
 =======
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> develop
 =======
+>>>>>>> stage
+=======
+=======
+>>>>>>> a0x8o
 >>>>>>> stage
   if(inAGrid)
   {
@@ -3951,10 +3957,13 @@ void TranslateBetweenGrids(
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> stage
 <<<<<<< HEAD
+=======
+>>>>>>> stage
 =======
   mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
 <<<<<<< HEAD
@@ -3965,14 +3974,20 @@ void TranslateBetweenGrids(
 =======
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> develop
 =======
+>>>>>>> stage
+=======
+=======
+>>>>>>> a0x8o
 >>>>>>> stage
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -3990,8 +4005,13 @@ void TranslateBetweenGrids(
 =======
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> develop
 =======
+>>>>>>> stage
+=======
+=======
+>>>>>>> a0x8o
 >>>>>>> stage
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();

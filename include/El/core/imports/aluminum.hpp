@@ -137,10 +137,13 @@ ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> stage
 <<<<<<< HEAD
+=======
+>>>>>>> stage
 =======
 <<<<<<< HEAD
 >>>>>>> d66388614 (Update the event creation flags under HIP (#161))
@@ -150,8 +153,13 @@ ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 =======
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> develop
 =======
+>>>>>>> stage
+=======
+=======
+>>>>>>> a0x8o
 >>>>>>> stage
 #endif // HYDROGEN_HAVE_NCCL2
 
