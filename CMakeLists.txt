@@ -83,6 +83,7 @@ set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -582,6 +583,9 @@ set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> be301f377 (Add an EnsureComm call to make sure things are sane (#182))
 =======
 >>>>>>> develop
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> a0x8o
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -973,6 +977,7 @@ if (Aluminum_FOUND)
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   if (Aluminum_FOUND)
     set(HYDROGEN_HAVE_ALUMINUM TRUE)
@@ -1020,6 +1025,8 @@ if (Aluminum_FOUND)
 >>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
 =======
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+=======
+>>>>>>> a0x8o
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()

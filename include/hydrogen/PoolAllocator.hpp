@@ -588,6 +588,7 @@ struct PooledDeviceAllocator {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
 =======
             gpuDebug(event_status);
@@ -604,6 +605,9 @@ struct PooledDeviceAllocator {
 =======
             static_cast<void>(gpuDebug(event_status));
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+=======
+            static_cast<void>(gpuDebug(event_status));
+>>>>>>> a0x8o
             is_reusable = true;
           }
         }
@@ -666,6 +670,7 @@ struct PooledDeviceAllocator {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
 =======
         gpuGetLastError();  // Reset error
@@ -682,6 +687,9 @@ struct PooledDeviceAllocator {
 =======
         static_cast<void>(gpuGetLastError());  // Reset error
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+=======
+        static_cast<void>(gpuGetLastError());  // Reset error
+>>>>>>> a0x8o
 
         // Lock
         mutex.lock();
@@ -975,6 +983,7 @@ struct PooledDeviceAllocator {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
 =======
       FreeAllCached();
@@ -991,6 +1000,9 @@ struct PooledDeviceAllocator {
 =======
       static_cast<void>(FreeAllCached());
 >>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
+=======
+      static_cast<void>(FreeAllCached());
+>>>>>>> a0x8o
   }
 
   /* Inspection and reporting methods */
