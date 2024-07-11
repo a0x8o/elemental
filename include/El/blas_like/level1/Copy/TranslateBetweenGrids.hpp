@@ -3890,8 +3890,6 @@ void TranslateBetweenGrids(
   Int strideA = A.RowStride();
   Int ALDim = A.LDim();
 
-<<<<<<< HEAD
-=======
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
 
   bool const inAGrid = A.Participating();
@@ -3899,40 +3897,6 @@ void TranslateBetweenGrids(
 
   Int recvMetaData[4];
   Int metaData[4];
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  // Create A metadata
-  Int recvMetaData[4];
-  Int metaData[4];
-
-  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
->>>>>>> develop
-  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-
-  bool const inAGrid = A.Participating();
-  bool const inBGrid = B.Participating();
-
-<<<<<<< HEAD
-  Int recvMetaData[4];
-  Int metaData[4];
-=======
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> develop
-=======
->>>>>>> stage
-=======
-=======
->>>>>>> a0x8o
->>>>>>> stage
   if(inAGrid)
   {
     metaData[0] = m;
@@ -3955,64 +3919,11 @@ void TranslateBetweenGrids(
                  viewingCommB,
                  SyncInfo<El::Device::CPU>{});
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> stage
-<<<<<<< HEAD
-=======
->>>>>>> stage
-=======
-  mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> develop
-=======
->>>>>>> stage
-=======
-=======
->>>>>>> a0x8o
->>>>>>> stage
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> stage
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> develop
-=======
->>>>>>> stage
-=======
-=======
->>>>>>> a0x8o
->>>>>>> stage
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
