@@ -10,6 +10,8 @@
 #define EL_BLAS_COPY_TRANSLATEBETWEENGRIDS_HPP
 
 #include "core/environment/decl.hpp"
+#include <optional>
+
 namespace El
 {
 namespace copy
@@ -3562,7 +3564,6 @@ void TranslateBetweenGridsAsync
     const Int mLocA = A.LocalHeight();
     const Int nLocA = A.LocalWidth();
 
-
     mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
     mpi::Group owningGroupA = A.Grid().OwningGroup();
 
@@ -3856,7 +3857,8 @@ void TranslateBetweenGrids(
   EL_DEBUG_CSE;
 
   /* Overview
-
+     We broadcast the size of A to all the ranks in B to make sure that
+     all ranks in B subgrid has the correct size of A.
      Since we are using blocking communication, some care is required
      to avoid deadlocks. Let's start with a naive algorithm for
      [STAR,VC] matrices and optimize it in steps:
@@ -3883,21 +3885,55 @@ void TranslateBetweenGrids(
   */
 
   // Matrix dimensions
-  const Int m = A.Height();
-  const Int n = A.Width();
+  Int m = A.Height();
+  Int n = A.Width();
+  Int strideA = A.RowStride();
+  Int ALDim = A.LDim();
+
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+  bool const inAGrid = A.Participating();
+  bool const inBGrid = B.Participating();
+
+  Int recvMetaData[4];
+  Int metaData[4];
+  if(inAGrid)
+  {
+    metaData[0] = m;
+    metaData[1] = n;
+    metaData[2] = strideA;
+    metaData[3] = ALDim;
+  }
+  else
+  {
+    metaData[0] = 0;
+    metaData[1] = 0;
+    metaData[2] = 0;
+    metaData[3] = 0;
+  }
+  const std::vector<Int> sendMetaData (metaData, metaData + 4);
+  mpi::AllReduce(sendMetaData.data(),
+                 recvMetaData,
+                 4,
+                 mpi::MAX,
+                 viewingCommB,
+                 SyncInfo<El::Device::CPU>{});
+
+  m = recvMetaData[0];
+  n = recvMetaData[1];
+  strideA = recvMetaData[2];
+  ALDim =recvMetaData[3];
+
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
 
   // Return immediately if there is no local data
-  const bool inAGrid = A.Participating();
-  const bool inBGrid = B.Participating();
   if (!inAGrid && !inBGrid) {
     return;
   }
 
   // Compute the number of messages to send/recv
-  const Int strideA = A.RowStride();
   const Int strideB = B.RowStride();
   const Int strideGCD = GCD(strideA, strideB);
   const Int numSends = Min(strideB/strideGCD, nLocA);
@@ -3906,14 +3942,24 @@ void TranslateBetweenGrids(
   // Synchronize compute streams
   SyncInfo<D> syncInfoA = SyncInfoFromMatrix(A.LockedMatrix());
   SyncInfo<D> syncInfoB = SyncInfoFromMatrix(B.Matrix());
-  auto syncHelper = MakeMultiSync(syncInfoB, syncInfoA);
-  const SyncInfo<D>& syncInfo = syncHelper;
+
+  std::optional<MultiSync<D, D>> maybeMultiSync;
+  if (inAGrid && inBGrid)
+      maybeMultiSync.emplace(syncInfoB, syncInfoA);
+
+  SyncInfo<D> const syncInfo =
+      (maybeMultiSync.has_value()
+       ? *maybeMultiSync
+       : (inAGrid ? syncInfoA : syncInfoB));
+
+  // Collective!
+  mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
+  mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
   // communicator is not necessarily defined on every process, we
   // instead work with A's owning group.
-  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
   mpi::Group owningGroupA = A.Grid().OwningGroup();
   const int sizeA = A.Grid().Size();
   vector<int> viewingRanksA(sizeA), owningRanksA(sizeA);
@@ -3976,7 +4022,7 @@ void TranslateBetweenGrids(
       // Copy data locally
       copy::util::InterleaveMatrix(
         m, messageWidth,
-        A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
+        A.LockedBuffer(0,jLocA), 1, numSends*ALDim,
         B.Buffer(0,jLocB), 1, numRecvs*B.LDim(),
         syncInfo);
     }
@@ -3984,7 +4030,7 @@ void TranslateBetweenGrids(
       // Send data to other rank
       copy::util::InterleaveMatrix(
         m, messageWidth,
-        A.LockedBuffer(0,jLocA), 1, numSends*A.LDim(),
+        A.LockedBuffer(0,jLocA), 1, numSends*ALDim,
         messageBuf.data(), 1, m,
         syncInfo);
       mpi::Send(

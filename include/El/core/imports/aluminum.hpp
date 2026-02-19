@@ -31,7 +31,11 @@ enum class Collective
     REDUCE,
     REDUCESCATTER,
     SCATTER,
-    SENDRECV
+
+    // Not collectives, but what can you do
+    SENDRECV,
+    SEND,
+    RECV,
 };// enum class Collective
 
 #ifndef HYDROGEN_HAVE_ALUMINUM
@@ -115,6 +119,8 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::MPIBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::MPIBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::MPIBackend);
 
 #ifdef HYDROGEN_HAVE_NCCL2
 // NCCL backend supports these
@@ -126,7 +132,9 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::GATHER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
-//ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
+ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
@@ -140,6 +148,8 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::HostTransferBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::HostTransferBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::HostTransferBackend);
 #endif // HYDROGEN_HAVE_AL_HOST_XFER
 
 template <Device D>
@@ -349,10 +359,26 @@ struct SyncInfoManager<Device::GPU>
 };
 #endif // HYDROGEN_HAVE_GPU
 
+inline bool use_separate_comm_stream() noexcept
+{
+    char const* const env = std::getenv("H_USE_SEPARATE_COMM_STREAM");
+    return (env && std::strlen(env) && env[0] != '0');
+}
+
 template <typename BackendT>
 SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
 {
     constexpr Device D = DeviceForBackend<BackendT>();
+#ifdef HYDROGEN_HAVE_GPU
+    if constexpr (D == El::Device::GPU)
+    {
+        static bool const use_separate_stream = use_separate_comm_stream();
+        if (!use_separate_stream)
+        {
+            return El::gpu::DefaultSyncInfo();
+        }
+    }
+#endif // HYDROGEN_HAVE_GPU
     static SyncInfoManager<D> si_mgr_(BackendT::Name());
     return si_mgr_.si_;
 }

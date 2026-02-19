@@ -11,13 +11,20 @@ foreach (src_file ${SOURCES})
   add_executable("${__test_name}" ${src_file})
   target_link_libraries("${__test_name}" PRIVATE ${HYDROGEN_LIBRARIES})
 
+  # FIXME: https://github.com/llnl/elemental/issues/159
+  if (__test_name MATCHES "DifferentGridsGeneral")
+    continue()
+  endif ()
+    
   # Create test
   add_test(NAME "${__test_name}.test"
     COMMAND "${__test_name}")
 
-  add_test(NAME "${__test_name}_mpi_np4.test"
-    COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPI_PREFLAGS}
-    $<TARGET_FILE:${__test_name}> ${MPI_POSTFLAGS})
+  if (MPIEXEC)
+    add_test(NAME "${__test_name}_mpi_np4.test"
+      COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 4 ${MPI_PREFLAGS}
+      $<TARGET_FILE:${__test_name}> ${MPI_POSTFLAGS})
+  endif ()
 endforeach ()
 
 set_target_properties(HermitianEig

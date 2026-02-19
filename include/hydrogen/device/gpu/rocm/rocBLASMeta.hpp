@@ -7,7 +7,7 @@
 #include <hydrogen/meta/MetaUtilities.hpp>
 #include <hydrogen/utils/HalfPrecision.hpp>
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 namespace hydrogen
 {
@@ -41,14 +41,9 @@ struct NativeTypeT<std::complex<double>> { using type = rocblas_double_complex; 
 
 // Half precision requires conversion as well
 #ifdef HYDROGEN_GPU_USE_FP16
-template <> struct NativeTypeT<rocblas_half> { using type = rocblas_half; };
+template <> struct NativeTypeT<gpu_half_type> { using type = rocblas_half; };
 #ifdef HYDROGEN_HAVE_HALF
 template <> struct NativeTypeT<cpu_half_type> { using type = rocblas_half; };
-template <>
-struct NativeTypeT<std::complex<cpu_half_type>>
-{
-    using type = rocblas_half_complex;
-};
 #endif // HYDROGEN_HAVE_HALF
 #endif // HYDROGEN_GPU_USE_FP16
 
@@ -118,10 +113,18 @@ struct IsSupportedType_Base<rocblas_double_complex, BLAS_Op::TRSM>
 template <>
 struct IsSupportedType_Base<rocblas_half, BLAS_Op::AXPY> : std::true_type {};
 template <>
+struct IsSupportedType_Base<rocblas_half, BLAS_Op::DOT> : std::true_type {};
+template <>
 struct IsSupportedType_Base<rocblas_half, BLAS_Op::GEMM> : std::true_type {};
 template <>
 struct IsSupportedType_Base<rocblas_half, BLAS_Op::GEMMSTRIDEDBATCHED>
     : std::true_type {};
+// support via rocblas_nrm2_ex
+template <>
+struct IsSupportedType_Base<rocblas_half, BLAS_Op::NRM2> : std::true_type {};
+// support via rocblas_scal_ex
+template <>
+struct IsSupportedType_Base<rocblas_half, BLAS_Op::SCAL> : std::true_type {};
 #endif // HYDROGEN_GPU_USE_FP16
 
 /** @class IsSupportedType

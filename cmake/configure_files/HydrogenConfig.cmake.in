@@ -92,6 +92,7 @@ if (_HYDROGEN_HAVE_CUDA)
 endif ()
 
 set(_HYDROGEN_HAVE_ROCM @HYDROGEN_HAVE_ROCM@)
+set(_HYDROGEN_HAVE_ROCTRACER @HYDROGEN_HAVE_ROCTRACER@)
 if (_HYDROGEN_HAVE_ROCM)
 
   find_dependency(hip CONFIG)
@@ -106,6 +107,14 @@ if (_HYDROGEN_HAVE_ROCM)
   find_dependency(rocblas CONFIG)
   find_dependency(rocsolver CONFIG)
   find_dependency(rocthrust CONFIG)
+
+  if (_HYDROGEN_HAVE_ROCTRACER)
+    find_dependency(Roctracer MODULE COMPONENTS roctx)
+  endif ()
+
+  include(HydrogenCleanupHIPTargets)
+  h_clean_hip_targets()
+
   set(HYDROGEN_HAVE_ROCM TRUE)
 endif (_HYDROGEN_HAVE_ROCM)
 
@@ -114,7 +123,7 @@ if (HYDROGEN_HAVE_HALF)
   find_dependency(HALF)
 endif ()
 
-if (_HYDROGEN_HAVE_CUDA)
+if (_HYDROGEN_HAVE_CUDA OR _HYDROGEN_HAVE_ROCM)
   set(HYDROGEN_GPU_USE_FP16 @HYDROGEN_GPU_USE_FP16@)
 endif ()
 
