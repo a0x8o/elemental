@@ -366,7 +366,97 @@ void Contract( const BlockMatrix<T>& A, BlockMatrix<T>& B );
 
 // Copy
 // ====
+<<<<<<< HEAD
 class BaseDistMatrix;
+=======
+
+template<typename T>
+void Copy( const Matrix<T>& A, Matrix<T>& B );
+template<typename S,typename T,
+         typename=EnableIf<And< CanCast<S,T>, Not<IsSame<S,T>> >>>
+void Copy( const Matrix<S>& A, Matrix<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf<CanCast<S,T>>>
+void Copy( const ElementalMatrix<S>& A, ElementalMatrix<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf<CanCast<S,T>>>
+void Copy( const BlockMatrix<S>& A, BlockMatrix<T>& B );
+
+template<typename T>
+void Copy( const AbstractDistMatrix<T>& A, AbstractDistMatrix<T>& B );
+template<typename S,typename T,
+         typename=EnableIf<And< CanCast<S,T>, Not<IsSame<S,T>> >>>
+void Copy( const AbstractDistMatrix<S>& A, AbstractDistMatrix<T>& B );
+
+template<typename T>
+void CopyFromRoot
+( const Matrix<T>& A, DistMatrix<T,CIRC,CIRC>& B,
+  bool includingViewers=false );
+template<typename T>
+void CopyFromNonRoot( DistMatrix<T,CIRC,CIRC>& B,
+  bool includingViewers=false );
+
+template<typename T>
+void CopyFromRoot
+( const Matrix<T>& A, DistMatrix<T,CIRC,CIRC,BLOCK>& B,
+  bool includingViewers=false );
+template<typename T>
+void CopyFromNonRoot( DistMatrix<T,CIRC,CIRC,BLOCK>& B,
+  bool includingViewers=false );
+
+void Copy( const Graph& A, Graph& B );
+void Copy( const Graph& A, DistGraph& B );
+void Copy( const DistGraph& A, Graph& B );
+void Copy( const DistGraph& A, DistGraph& B );
+
+void CopyFromRoot( const DistGraph& distGraph, Graph& graph );
+void CopyFromNonRoot( const DistGraph& distGraph, int root=0 );
+
+template<typename T>
+void Copy( const SparseMatrix<T>& A, SparseMatrix<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf<And< CanCast<S,T>, Not<IsSame<S,T>> >> >
+void Copy( const SparseMatrix<S>& A, SparseMatrix<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf<CanCast<S,T>>>
+void Copy( const SparseMatrix<S>& A, Matrix<T>& B );
+
+template<typename T>
+void Copy( const DistSparseMatrix<T>& A, DistSparseMatrix<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf<And<CanCast<S,T>,Not<IsSame<S,T>>>>>
+void Copy( const DistSparseMatrix<S>& A, DistSparseMatrix<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf<CanCast<S,T>>>
+void Copy( const DistSparseMatrix<S>& A, AbstractDistMatrix<T>& B );
+
+template<typename T>
+void CopyFromRoot( const DistSparseMatrix<T>& ADist, SparseMatrix<T>& A );
+template<typename T>
+void CopyFromNonRoot( const DistSparseMatrix<T>& ADist, int root=0 );
+
+template<typename T>
+void Copy( const DistMultiVec<T>& A, DistMultiVec<T>& B );
+
+template<typename S,typename T,
+         typename=EnableIf< And< CanCast<S,T>, Not<IsSame<S,T>> > >>
+void Copy( const DistMultiVec<S>& A, DistMultiVec<T>& B );
+
+template<typename T>
+void Copy( const DistMultiVec<T>& A, AbstractDistMatrix<T>& B );
+template<typename T>
+void Copy( const AbstractDistMatrix<T>& A, DistMultiVec<T>& B );
+template<typename T>
+void CopyFromRoot( const DistMultiVec<T>& XDist, Matrix<T>& X );
+template<typename T>
+void CopyFromNonRoot( const DistMultiVec<T>& XDist, int root=0 );
+>>>>>>> f3ede0050 (Fix ambiguous template special. errors with GCC 7+)
 
 namespace copy {
 namespace util {

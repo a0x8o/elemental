@@ -31,8 +31,13 @@ void Zero_seq(AbstractMatrix<T>& A)
 
     switch (A.GetDevice())
     {
+<<<<<<< HEAD
     case Device::CPU:
         if( width == 1 || ALDim == height )
+=======
+#ifdef EL_HYBRID
+        #pragma omp parallel
+>>>>>>> f46681a4a (Enable OpenMP code only if EL_HYBRID is set)
         {
             MemZero( ABuf, size );
         }
