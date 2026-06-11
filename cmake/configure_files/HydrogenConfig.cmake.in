@@ -108,10 +108,19 @@ if (_HYDROGEN_HAVE_ROCM)
   find_dependency(rocsolver CONFIG)
   find_dependency(rocthrust CONFIG)
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ebfbc6418 (Add support for roctx annotations (#138))
   if (_HYDROGEN_HAVE_ROCTRACER)
     find_dependency(Roctracer MODULE COMPONENTS roctx)
   endif ()
 
+<<<<<<< HEAD
+=======
+>>>>>>> 4abe4ef0e (Clean up HIP IMPORTED targets in CMake (#137))
+=======
+>>>>>>> ebfbc6418 (Add support for roctx annotations (#138))
   include(HydrogenCleanupHIPTargets)
   h_clean_hip_targets()
 
