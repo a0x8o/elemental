@@ -623,10 +623,14 @@ struct PooledDeviceAllocator {
           const gpuError_t event_status = gpuEventQuery(block_itr->ready_event);
           if (event_status != gpuErrorNotReady) {
 <<<<<<< HEAD
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
 =======
             gpuDebug(event_status);
 >>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+            static_cast<void>(gpuDebug(event_status));
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
             is_reusable = true;
           }
         }
@@ -686,10 +690,14 @@ struct PooledDeviceAllocator {
 
         error = gpuSuccess; // Reset the error we will return
 <<<<<<< HEAD
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
 =======
         gpuGetLastError();  // Reset error
 >>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+        static_cast<void>(gpuGetLastError());  // Reset error
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
 
         // Lock
         mutex.lock();
@@ -980,10 +988,14 @@ struct PooledDeviceAllocator {
   virtual ~PooledDeviceAllocator() {
     if (!skip_cleanup)
 <<<<<<< HEAD
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
 =======
       FreeAllCached();
 >>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+      static_cast<void>(FreeAllCached());
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
   }
 
   /* Inspection and reporting methods */

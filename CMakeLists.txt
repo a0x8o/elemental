@@ -113,11 +113,14 @@ include(CMakeDependentOption)
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
 option(Hydrogen_ENABLE_ALUMINUM
   "Enable the Aluminum package for improved device-side communication."
   OFF)
 >>>>>>> ebfbc6418 (Add support for roctx annotations (#138))
 
+=======
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
 option(Hydrogen_ENABLE_CUDA
   "Search for CUDA support and enable related features if found."
   OFF)
@@ -465,6 +468,7 @@ if (Aluminum_FOUND)
   endif ()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
 =======
@@ -508,6 +512,10 @@ if (Aluminum_FOUND)
     endif ()
 
 >>>>>>> 007d37e4e (Fix a bug in in-place sendrecv operation (#147))
+=======
+  if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
+    message(STATUS "Aluminum detected with in-place SendRecv support.")
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()

@@ -136,6 +136,7 @@ ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
 <<<<<<< HEAD
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 <<<<<<< HEAD
+<<<<<<< HEAD
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 =======
@@ -146,6 +147,10 @@ ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 =======
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 >>>>>>> 007d37e4e (Fix a bug in in-place sendrecv operation (#147))
+=======
+ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
+ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER

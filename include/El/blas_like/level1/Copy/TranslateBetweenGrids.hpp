@@ -3891,6 +3891,7 @@ void TranslateBetweenGrids(
   Int ALDim = A.LDim();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
 
   bool const inAGrid = A.Participating();
@@ -3945,11 +3946,17 @@ void TranslateBetweenGrids(
 =======
 
 >>>>>>> 2f7f309e7 (Add metadata support to TranslateBetweenGrid for Star VC (#151))
+=======
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
 
   // Return immediately if there is no local data
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
   if (!inAGrid && !inBGrid) {
     return;
   }
@@ -3972,10 +3979,13 @@ void TranslateBetweenGrids(
       (maybeMultiSync.has_value()
        ? *maybeMultiSync
        : (inAGrid ? syncInfoA : syncInfoB));
+<<<<<<< HEAD
 
   // Collective!
   mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
   mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
+=======
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
 
   // Translate the ranks from A's VC communicator to B's viewing so
   // that we can match send/recv communicators. Since A's VC
