@@ -3921,6 +3921,7 @@ void TranslateBetweenGrids(
                  viewingCommB,
                  SyncInfo<El::Device::CPU>{});
 
+<<<<<<< HEAD
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
@@ -3969,11 +3970,14 @@ void TranslateBetweenGrids(
 =======
   mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
 >>>>>>> 2f7f309e7 (Add metadata support to TranslateBetweenGrid for Star VC (#151))
+=======
+>>>>>>> develop
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 
@@ -3982,6 +3986,8 @@ void TranslateBetweenGrids(
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
 
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+>>>>>>> develop
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();

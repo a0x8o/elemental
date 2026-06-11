@@ -624,6 +624,7 @@ struct PooledDeviceAllocator {
           if (event_status != gpuErrorNotReady) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
 =======
             gpuDebug(event_status);
@@ -631,6 +632,9 @@ struct PooledDeviceAllocator {
 =======
             static_cast<void>(gpuDebug(event_status));
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+            static_cast<void>(gpuDebug(event_status));
+>>>>>>> develop
             is_reusable = true;
           }
         }
@@ -691,6 +695,7 @@ struct PooledDeviceAllocator {
         error = gpuSuccess; // Reset the error we will return
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
 =======
         gpuGetLastError();  // Reset error
@@ -698,6 +703,9 @@ struct PooledDeviceAllocator {
 =======
         static_cast<void>(gpuGetLastError());  // Reset error
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+        static_cast<void>(gpuGetLastError());  // Reset error
+>>>>>>> develop
 
         // Lock
         mutex.lock();
@@ -989,6 +997,7 @@ struct PooledDeviceAllocator {
     if (!skip_cleanup)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
 =======
       FreeAllCached();
@@ -996,6 +1005,9 @@ struct PooledDeviceAllocator {
 =======
       static_cast<void>(FreeAllCached());
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+      static_cast<void>(FreeAllCached());
+>>>>>>> develop
   }
 
   /* Inspection and reporting methods */

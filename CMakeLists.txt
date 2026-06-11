@@ -53,6 +53,7 @@ set(HYDROGEN_VERSION_MAJOR 1)
 set(HYDROGEN_VERSION_MINOR 5)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 set(HYDROGEN_VERSION_PATCH 4)
 =======
 set(HYDROGEN_VERSION_PATCH 3)
@@ -60,6 +61,9 @@ set(HYDROGEN_VERSION_PATCH 3)
 =======
 set(HYDROGEN_VERSION_PATCH 4)
 >>>>>>> a72e81661 (Update CMakeLists.txt)
+=======
+set(HYDROGEN_VERSION_PATCH 4)
+>>>>>>> develop
 set(HYDROGEN_VERSION_MAJOR_MINOR
     "${HYDROGEN_VERSION_MAJOR}.${HYDROGEN_VERSION_MINOR}")
 set(HYDROGEN_VERSION
@@ -471,6 +475,7 @@ if (Aluminum_FOUND)
 <<<<<<< HEAD
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
+<<<<<<< HEAD
 =======
   if (Aluminum_FOUND)
     set(HYDROGEN_HAVE_ALUMINUM TRUE)
@@ -516,6 +521,8 @@ if (Aluminum_FOUND)
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+>>>>>>> develop
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()

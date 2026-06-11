@@ -105,6 +105,7 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 #include <cuda_fp16.h>
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 // Needed for CUDA_VERSION
 #include <cuda.h>
 =======
@@ -113,6 +114,10 @@ inline hydrogen::cpu_half_type operator^(hydrogen::cpu_half_type const&,
 // Needed for CUDA_VERSION
 #include <cuda.h>
 >>>>>>> e10f53e03 (Don't declare operator overloads for half with CUDA >= 12.2. (#175))
+=======
+// Needed for CUDA_VERSION
+#include <cuda.h>
+>>>>>>> develop
 #elif defined(HYDROGEN_HAVE_ROCM)
 #include <hip/hip_fp16.h>
 #endif // HYDROGEN_HAVE_CUDA
@@ -141,6 +146,7 @@ struct TypeTraits<gpu_half_type>
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 #if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
 =======
 #if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
@@ -154,6 +160,9 @@ struct TypeTraits<gpu_half_type>
 =======
 #if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
 >>>>>>> a03e87101 (A fix for bleeding edge clang (#187))
+=======
+#if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
+>>>>>>> develop
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
@@ -265,6 +274,7 @@ inline bool operator!=(
 #endif // defined(HYDROGEN_HAVE_ROCM)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 #endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
 =======
 #endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
@@ -272,6 +282,9 @@ inline bool operator!=(
 =======
 #endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
 >>>>>>> e10f53e03 (Don't declare operator overloads for half with CUDA >= 12.2. (#175))
+=======
+#endif // defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
+>>>>>>> develop
 
 inline std::ostream& operator<<(std::ostream& os, hydrogen::gpu_half_type const& x)
 {

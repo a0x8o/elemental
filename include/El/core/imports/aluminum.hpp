@@ -139,6 +139,7 @@ ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 <<<<<<< HEAD
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
+<<<<<<< HEAD
 =======
 >>>>>>> 385877ec9 (Reenable the Al::NCCLBackend dispatch for SendRecv (#144))
 =======
@@ -151,6 +152,8 @@ ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 >>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+>>>>>>> develop
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
@@ -387,12 +390,16 @@ SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
     constexpr Device D = DeviceForBackend<BackendT>();
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 #ifdef HYDROGEN_HAVE_GPU
 =======
 >>>>>>> 039d681cc (Make the separate communication stream optional (#184))
 =======
 #ifdef HYDROGEN_HAVE_GPU
 >>>>>>> a5db02886 (Add macro protection to GPU code block (#185))
+=======
+#ifdef HYDROGEN_HAVE_GPU
+>>>>>>> develop
     if constexpr (D == El::Device::GPU)
     {
         static bool const use_separate_stream = use_separate_comm_stream();
@@ -403,6 +410,7 @@ SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
     }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 #endif // HYDROGEN_HAVE_GPU
 =======
 
@@ -410,6 +418,9 @@ SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
 =======
 #endif // HYDROGEN_HAVE_GPU
 >>>>>>> a5db02886 (Add macro protection to GPU code block (#185))
+=======
+#endif // HYDROGEN_HAVE_GPU
+>>>>>>> develop
     static SyncInfoManager<D> si_mgr_(BackendT::Name());
     return si_mgr_.si_;
 }
