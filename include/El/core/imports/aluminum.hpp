@@ -133,6 +133,7 @@ ADD_ALUMINUM_COLLECTIVE(       Collective::REDUCE, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(Collective::REDUCESCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
 <<<<<<< HEAD
+<<<<<<< HEAD
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 <<<<<<< HEAD
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
@@ -142,6 +143,9 @@ ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
 =======
 //ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 >>>>>>> 2a92f87db (Revert "Reenable the Al::NCCLBackend dispatch for SendRecv (#144)" (#145))
+=======
+ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
+>>>>>>> 007d37e4e (Fix a bug in in-place sendrecv operation (#147))
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER

@@ -456,8 +456,63 @@ if (Aluminum_FOUND)
     set(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV FALSE)
   endif ()
 
+<<<<<<< HEAD
   if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
     message(STATUS "Aluminum detected with in-place SendRecv support.")
+=======
+  if (Aluminum_FOUND)
+    set(HYDROGEN_HAVE_ALUMINUM TRUE)
+    message(STATUS
+      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+      set(HYDROGEN_HAVE_NCCL2 TRUE)
+      message(STATUS "Aluminum detected with NCCL2 backend support.")
+    else ()
+      set(HYDROGEN_HAVE_NCCL2 FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_NCCL)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+      set(HYDROGEN_HAVE_AL_HOST_XFER TRUE)
+      message(STATUS "Aluminum detected with HostTransfer backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_HOST_XFER FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+
+    if (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+      set(HYDROGEN_HAVE_AL_MPI_CUDA TRUE)
+      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+    else ()
+      set(HYDROGEN_HAVE_AL_MPI_CUDA FALSE)
+    endif (HYDROGEN_HAVE_GPU AND AL_HAS_MPI_CUDA)
+
+    # Check for in-place SendRecv.
+    set(_AL_SENDRECV_TEST_SRC "
+#include <Al.hpp>
+using Backend = Al::MPIBackend;  // Always defined
+using CommT = typename Backend::comm_type;
+void check_sendrecv(float* buf, size_t count, int to, int from, CommT& comm)
+{
+    Al::SendRecv<Backend>(buf, count, to, from, comm);
+}
+int main() { return 0; }
+")
+    file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx"
+      "${_AL_SENDRECV_TEST_SRC}\n")
+    try_compile(HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV
+      ${CMAKE_BINARY_DIR}
+      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx
+      LINK_LIBRARIES ${Aluminum_LIBRARIES}
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED TRUE
+    )
+    if (HYDROGEN_AL_SUPPORTS_INPLACE_SENDRECV)
+      message(STATUS "Aluminum detected with in-place SendRecv support.")
+    else ()
+      message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
+    endif ()
+
+>>>>>>> 007d37e4e (Fix a bug in in-place sendrecv operation (#147))
   else ()
     message(STATUS "Aluminum detected WITHOUT in-place SendRecv support.")
   endif ()
