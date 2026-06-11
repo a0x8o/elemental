@@ -76,12 +76,18 @@ public:
 #endif // HYDROGEN_HAVE_CUB
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d883ac3d9 (Match cuBLAS sync behavior (#169))
                 // Sync stream to match cuBLAS behavior (cuBLAS docs here:
                 // https://docs.nvidia.com/cuda/cublas/#scalar-parameters)
                 H_CHECK_HIP(hipStreamSynchronize(stream));
 
+<<<<<<< HEAD
 =======
 >>>>>>> bc4ea5306 (Manage host returns from rocBLAS manually (#168))
+=======
+>>>>>>> d883ac3d9 (Match cuBLAS sync behavior (#169))
                 // Reset pointer mode
                 H_CHECK_ROCBLAS(rocblas_set_pointer_mode(handle_, rocblas_pointer_mode_host));
             }
