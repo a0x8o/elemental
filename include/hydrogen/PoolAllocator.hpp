@@ -61,7 +61,14 @@
 #define gpuEventCreateWithFlags cudaEventCreateWithFlags
 #define gpuEventDisableTiming cudaEventDisableTiming
 #define gpuEventRecord cudaEventRecord
+<<<<<<< HEAD
+<<<<<<< HEAD
 #define gpuGetErrorString cudaGetErrorString
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+#define gpuGetErrorString cudaGetErrorString
+>>>>>>> 2a6b657c6 (Fix ROCm compile issues (#174))
 
 #define gpuStream_t cudaStream_t
 #define gpuEvent_t cudaEvent_t
@@ -86,15 +93,30 @@
 #define gpuMalloc hipMalloc
 #define gpuFreeAsync hipFreeAsync
 #define gpuFree hipFree
+<<<<<<< HEAD
+<<<<<<< HEAD
 #define gpuSetDevice hipSetDevice
 #define gpuGetDevice hipGetDevice
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+#define gpuSetDevice hipSetDevice
+#define gpuGetDevice hipGetDevice
+>>>>>>> 2a6b657c6 (Fix ROCm compile issues (#174))
 #define gpuEventQuery hipEventQuery
 #define gpuGetLastError hipGetLastError
 #define gpuEventDestroy hipEventDestroy
 #define gpuEventCreateWithFlags hipEventCreateWithFlags
 #define gpuEventDisableTiming hipEventDisableTiming
 #define gpuEventRecord hipEventRecord
+<<<<<<< HEAD
+<<<<<<< HEAD
 #define gpuGetErrorString hipGetErrorString
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+#define gpuGetErrorString hipGetErrorString
+>>>>>>> 2a6b657c6 (Fix ROCm compile issues (#174))
 
 #define gpuStream_t hipStream_t
 #define gpuEvent_t hipEvent_t
@@ -122,11 +144,27 @@ __host__ __device__ __forceinline__ gpuError_t Debug(gpuError_t error,
                                                      int line) {
   if (error) {
 #if (GPU_PTX_ARCH == 0)
+<<<<<<< HEAD
+<<<<<<< HEAD
     fprintf(stderr, "GPU error %d [%s, %d]: %s\n", error, filename, line,
             gpuGetErrorString(error));
     fflush(stderr);
 #else
     printf("GPU error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
+=======
+    fprintf(stderr, "CUDA error %d [%s, %d]: %s\n", error, filename, line,
+            cudaGetErrorString(error));
+    fflush(stderr);
+#else
+    printf("CUDA error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+    fprintf(stderr, "GPU error %d [%s, %d]: %s\n", error, filename, line,
+            gpuGetErrorString(error));
+    fflush(stderr);
+#else
+    printf("GPU error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
+>>>>>>> 2a6b657c6 (Fix ROCm compile issues (#174))
            error, blockIdx.z, blockIdx.y, blockIdx.x, threadIdx.z, threadIdx.y,
            threadIdx.x, filename, line);
 #endif
@@ -584,7 +622,19 @@ struct PooledDeviceAllocator {
         } else {
           const gpuError_t event_status = gpuEventQuery(block_itr->ready_event);
           if (event_status != gpuErrorNotReady) {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
+=======
+            gpuDebug(event_status);
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+            static_cast<void>(gpuDebug(event_status));
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+            static_cast<void>(gpuDebug(event_status));
+>>>>>>> develop
             is_reusable = true;
           }
         }
@@ -643,7 +693,19 @@ struct PooledDeviceAllocator {
                  (long long)search_key.associated_stream);
 
         error = gpuSuccess; // Reset the error we will return
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
+=======
+        gpuGetLastError();  // Reset error
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+        static_cast<void>(gpuGetLastError());  // Reset error
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+        static_cast<void>(gpuGetLastError());  // Reset error
+>>>>>>> develop
 
         // Lock
         mutex.lock();
@@ -933,7 +995,19 @@ struct PooledDeviceAllocator {
    */
   virtual ~PooledDeviceAllocator() {
     if (!skip_cleanup)
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
+=======
+      FreeAllCached();
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+      static_cast<void>(FreeAllCached());
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+      static_cast<void>(FreeAllCached());
+>>>>>>> develop
   }
 
   /* Inspection and reporting methods */
@@ -1133,7 +1207,14 @@ private:
 #undef gpuEventCreateWithFlags
 #undef gpuEventDisableTiming
 #undef gpuEventRecord
+<<<<<<< HEAD
+<<<<<<< HEAD
 #undef gpuGetErrorString
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
+=======
+#undef gpuGetErrorString
+>>>>>>> 2a6b657c6 (Fix ROCm compile issues (#174))
 #undef gpuStream_t
 #undef gpuEvent_t
 #undef gpuError_t

@@ -3890,6 +3890,8 @@ void TranslateBetweenGrids(
   Int strideA = A.RowStride();
   Int ALDim = A.LDim();
 
+<<<<<<< HEAD
+<<<<<<< HEAD
   mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
 
   bool const inAGrid = A.Participating();
@@ -3919,11 +3921,73 @@ void TranslateBetweenGrids(
                  viewingCommB,
                  SyncInfo<El::Device::CPU>{});
 
+<<<<<<< HEAD
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
+  bool const inAGrid = A.Participating();
+  bool const inBGrid = B.Participating();
+
+  Int recvMetaData[4];
+  Int metaData[4];
+=======
+  // Create A metadata
+  Int recvMetaData[4];
+  Int metaData[4];
+
+  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+  const bool inAGrid = A.Participating();
+  const bool inBGrid = B.Participating();
+
+>>>>>>> 2f7f309e7 (Add metadata support to TranslateBetweenGrid for Star VC (#151))
+  if(inAGrid)
+  {
+    metaData[0] = m;
+    metaData[1] = n;
+    metaData[2] = strideA;
+    metaData[3] = ALDim;
+  }
+  else
+  {
+    metaData[0] = 0;
+    metaData[1] = 0;
+    metaData[2] = 0;
+    metaData[3] = 0;
+  }
+  const std::vector<Int> sendMetaData (metaData, metaData + 4);
+<<<<<<< HEAD
+  mpi::AllReduce(sendMetaData.data(),
+                 recvMetaData,
+                 4,
+                 mpi::MAX,
+                 viewingCommB,
+                 SyncInfo<El::Device::CPU>{});
+
+=======
+  mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
+>>>>>>> 2f7f309e7 (Add metadata support to TranslateBetweenGrid for Star VC (#151))
+=======
+>>>>>>> develop
+  m = recvMetaData[0];
+  n = recvMetaData[1];
+  strideA = recvMetaData[2];
+  ALDim =recvMetaData[3];
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2f7f309e7 (Add metadata support to TranslateBetweenGrid for Star VC (#151))
+=======
+  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
+
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
+=======
+>>>>>>> develop
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();
@@ -3951,6 +4015,13 @@ void TranslateBetweenGrids(
       (maybeMultiSync.has_value()
        ? *maybeMultiSync
        : (inAGrid ? syncInfoA : syncInfoB));
+<<<<<<< HEAD
+
+  // Collective!
+  mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
+  mpi::EnsureComm<T, Collective::RECV>(viewingCommB, syncInfo);
+=======
+>>>>>>> 4fa2f41c5 (Add Aluminum dispatch for send and recv within TranslateBetweenGrids (#178))
 
   // Collective!
   mpi::EnsureComm<T, Collective::SEND>(viewingCommB, syncInfo);
