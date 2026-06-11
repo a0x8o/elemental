@@ -352,9 +352,14 @@ void Nrm2(rocblas_handle handle,
           rocblas_int n,
           rocblas_half const* X,
           rocblas_int incx,
+<<<<<<< HEAD
           rocblas_half* result_in)
 {
     auto result = manage_result(handle, result_in);
+=======
+          rocblas_half* result)
+{
+>>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
     H_CHECK_ROCBLAS(
         rocblas_nrm2_ex(
             handle,
@@ -362,7 +367,11 @@ void Nrm2(rocblas_handle handle,
             X,
             rocblas_datatype_f16_r,
             incx,
+<<<<<<< HEAD
             result.get(),
+=======
+            result,
+>>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
             rocblas_datatype_f16_r,
             rocblas_datatype_f32_r));
 }
