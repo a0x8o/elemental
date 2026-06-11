@@ -357,11 +357,14 @@ if (Hydrogen_ENABLE_ROCM)
   find_package(rocsolver CONFIG REQUIRED)
   find_package(rocthrust CONFIG REQUIRED)
 
+<<<<<<< HEAD
   if (Hydrogen_ENABLE_ROCTRACER)
     find_package(Roctracer MODULE COMPONENTS roctx)
     set(HYDROGEN_HAVE_ROCTRACER ${Roctracer_FOUND})
   endif ()
 
+=======
+>>>>>>> 4abe4ef0e (Clean up HIP IMPORTED targets in CMake (#137))
   include(HydrogenCleanupHIPTargets)
   h_clean_hip_targets()
 
