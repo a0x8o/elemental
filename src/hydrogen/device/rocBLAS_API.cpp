@@ -75,10 +75,13 @@ public:
                 H_CHECK_HIP(hipFreeAsync(device_, stream));
 #endif // HYDROGEN_HAVE_CUB
 
+<<<<<<< HEAD
                 // Sync stream to match cuBLAS behavior (cuBLAS docs here:
                 // https://docs.nvidia.com/cuda/cublas/#scalar-parameters)
                 H_CHECK_HIP(hipStreamSynchronize(stream));
 
+=======
+>>>>>>> bc4ea5306 (Manage host returns from rocBLAS manually (#168))
                 // Reset pointer mode
                 H_CHECK_ROCBLAS(rocblas_set_pointer_mode(handle_, rocblas_pointer_mode_host));
             }
@@ -353,6 +356,7 @@ void Nrm2(rocblas_handle handle,
           rocblas_half const* X,
           rocblas_int incx,
 <<<<<<< HEAD
+<<<<<<< HEAD
           rocblas_half* result_in)
 {
     auto result = manage_result(handle, result_in);
@@ -360,6 +364,11 @@ void Nrm2(rocblas_handle handle,
           rocblas_half* result)
 {
 >>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
+=======
+          rocblas_half* result_in)
+{
+    auto result = manage_result(handle, result_in);
+>>>>>>> bc4ea5306 (Manage host returns from rocBLAS manually (#168))
     H_CHECK_ROCBLAS(
         rocblas_nrm2_ex(
             handle,
@@ -368,10 +377,14 @@ void Nrm2(rocblas_handle handle,
             rocblas_datatype_f16_r,
             incx,
 <<<<<<< HEAD
+<<<<<<< HEAD
             result.get(),
 =======
             result,
 >>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
+=======
+            result.get(),
+>>>>>>> bc4ea5306 (Manage host returns from rocBLAS manually (#168))
             rocblas_datatype_f16_r,
             rocblas_datatype_f32_r));
 }
