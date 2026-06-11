@@ -61,7 +61,10 @@
 #define gpuEventCreateWithFlags cudaEventCreateWithFlags
 #define gpuEventDisableTiming cudaEventDisableTiming
 #define gpuEventRecord cudaEventRecord
+<<<<<<< HEAD
 #define gpuGetErrorString cudaGetErrorString
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
 
 #define gpuStream_t cudaStream_t
 #define gpuEvent_t cudaEvent_t
@@ -86,15 +89,21 @@
 #define gpuMalloc hipMalloc
 #define gpuFreeAsync hipFreeAsync
 #define gpuFree hipFree
+<<<<<<< HEAD
 #define gpuSetDevice hipSetDevice
 #define gpuGetDevice hipGetDevice
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
 #define gpuEventQuery hipEventQuery
 #define gpuGetLastError hipGetLastError
 #define gpuEventDestroy hipEventDestroy
 #define gpuEventCreateWithFlags hipEventCreateWithFlags
 #define gpuEventDisableTiming hipEventDisableTiming
 #define gpuEventRecord hipEventRecord
+<<<<<<< HEAD
 #define gpuGetErrorString hipGetErrorString
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
 
 #define gpuStream_t hipStream_t
 #define gpuEvent_t hipEvent_t
@@ -122,11 +131,19 @@ __host__ __device__ __forceinline__ gpuError_t Debug(gpuError_t error,
                                                      int line) {
   if (error) {
 #if (GPU_PTX_ARCH == 0)
+<<<<<<< HEAD
     fprintf(stderr, "GPU error %d [%s, %d]: %s\n", error, filename, line,
             gpuGetErrorString(error));
     fflush(stderr);
 #else
     printf("GPU error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
+=======
+    fprintf(stderr, "CUDA error %d [%s, %d]: %s\n", error, filename, line,
+            cudaGetErrorString(error));
+    fflush(stderr);
+#else
+    printf("CUDA error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
            error, blockIdx.z, blockIdx.y, blockIdx.x, threadIdx.z, threadIdx.y,
            threadIdx.x, filename, line);
 #endif
@@ -584,7 +601,11 @@ struct PooledDeviceAllocator {
         } else {
           const gpuError_t event_status = gpuEventQuery(block_itr->ready_event);
           if (event_status != gpuErrorNotReady) {
+<<<<<<< HEAD
             static_cast<void>(gpuDebug(event_status));
+=======
+            gpuDebug(event_status);
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
             is_reusable = true;
           }
         }
@@ -643,7 +664,11 @@ struct PooledDeviceAllocator {
                  (long long)search_key.associated_stream);
 
         error = gpuSuccess; // Reset the error we will return
+<<<<<<< HEAD
         static_cast<void>(gpuGetLastError());  // Reset error
+=======
+        gpuGetLastError();  // Reset error
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
 
         // Lock
         mutex.lock();
@@ -933,7 +958,11 @@ struct PooledDeviceAllocator {
    */
   virtual ~PooledDeviceAllocator() {
     if (!skip_cleanup)
+<<<<<<< HEAD
       static_cast<void>(FreeAllCached());
+=======
+      FreeAllCached();
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
   }
 
   /* Inspection and reporting methods */
@@ -1133,7 +1162,10 @@ private:
 #undef gpuEventCreateWithFlags
 #undef gpuEventDisableTiming
 #undef gpuEventRecord
+<<<<<<< HEAD
 #undef gpuGetErrorString
+=======
+>>>>>>> 587ffa4f6 (Extended GPU memory pool (#172))
 #undef gpuStream_t
 #undef gpuEvent_t
 #undef gpuError_t
