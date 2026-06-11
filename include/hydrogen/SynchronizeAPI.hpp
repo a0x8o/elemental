@@ -33,11 +33,15 @@ void AddSynchronizationPoint(SyncInfo<D> const &master,
 
     AddSynchronizationPoint(master);
 <<<<<<< HEAD
+<<<<<<< HEAD
     int dummy[] = {(details::AddSyncPoint(master, other), 0),
                    (details::AddSyncPoint(master, others), 0)...};
     (void)dummy;
 =======
     int dummy[] = {(details::AddSyncPoint(master, b),
+=======
+    int dummy[] = {(details::AddSyncPoint(master, other),
+>>>>>>> 12f0180e2 (Fix naming bug (#154))
                     details::AddSyncPoint(master, others), 0)...};
     (void)dummy;
 }
