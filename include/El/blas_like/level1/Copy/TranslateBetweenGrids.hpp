@@ -3897,25 +3897,6 @@ void TranslateBetweenGrids(
 
   Int recvMetaData[4];
   Int metaData[4];
-<<<<<<< HEAD
-=======
-  // Create A metadata
-  Int recvMetaData[4];
-  Int metaData[4];
-
-  SyncInfo<El::Device::CPU> syncGeneralMetaData = SyncInfo<El::Device::CPU>();
-  mpi::Comm const& viewingCommB = B.Grid().ViewingComm();
-
-  const bool inAGrid = A.Participating();
-  const bool inBGrid = B.Participating();
-
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
   if(inAGrid)
   {
     metaData[0] = m;
@@ -3938,32 +3919,11 @@ void TranslateBetweenGrids(
                  viewingCommB,
                  SyncInfo<El::Device::CPU>{});
 
-<<<<<<< HEAD
-=======
-  mpi::AllReduce( sendMetaData.data(), recvMetaData, 4, mpi::MAX, viewingCommB, syncGeneralMetaData);
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
   m = recvMetaData[0];
   n = recvMetaData[1];
   strideA = recvMetaData[2];
   ALDim =recvMetaData[3];
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
   B.Resize(m, n);
   const Int nLocA = A.LocalWidth();
   const Int nLocB = B.LocalWidth();

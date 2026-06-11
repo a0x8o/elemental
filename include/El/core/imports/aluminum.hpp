@@ -135,15 +135,6 @@ ADD_ALUMINUM_COLLECTIVE(      Collective::SCATTER, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(     Collective::SENDRECV, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::SEND, Al::NCCLBackend);
 ADD_ALUMINUM_COLLECTIVE(         Collective::RECV, Al::NCCLBackend);
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> d66388614 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> d1582b13d (Update the event creation flags under HIP (#161))
->>>>>>> 5e34b36b5 (Update the event creation flags under HIP (#161))
-=======
->>>>>>> 4785e7ffa (Add an EnsureComm call to make sure things are sane (#182))
 #endif // HYDROGEN_HAVE_NCCL2
 
 #ifdef HYDROGEN_HAVE_AL_HOST_XFER
@@ -368,10 +359,26 @@ struct SyncInfoManager<Device::GPU>
 };
 #endif // HYDROGEN_HAVE_GPU
 
+inline bool use_separate_comm_stream() noexcept
+{
+    char const* const env = std::getenv("H_USE_SEPARATE_COMM_STREAM");
+    return (env && std::strlen(env) && env[0] != '0');
+}
+
 template <typename BackendT>
 SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
 {
     constexpr Device D = DeviceForBackend<BackendT>();
+#ifdef HYDROGEN_HAVE_GPU
+    if constexpr (D == El::Device::GPU)
+    {
+        static bool const use_separate_stream = use_separate_comm_stream();
+        if (!use_separate_stream)
+        {
+            return El::gpu::DefaultSyncInfo();
+        }
+    }
+#endif // HYDROGEN_HAVE_GPU
     static SyncInfoManager<D> si_mgr_(BackendT::Name());
     return si_mgr_.si_;
 }
