@@ -21,17 +21,23 @@ void AddSynchronizationPoint(SyncInfo<D> const &master,
         if (master.Stream() == other.Stream())
         {
 <<<<<<< HEAD
+<<<<<<< HEAD
             if constexpr (sizeof...(others) > 0UL)
                 AddSynchronizationPoint(master, others...);
 =======
             AddSynchronizationPoint(master, others...);
 >>>>>>> 315bc6461 (Reduce the number of event record calls (#153))
+=======
+            if constexpr (sizeof...(others) > 0UL)
+                AddSynchronizationPoint(master, others...);
+>>>>>>> a0d3bbdd2 (Fix a subtle parameter expansion issue in sync info (#155))
             return;
         }
     }
 #endif // HYDROGEN_HAVE_GPU
 
     AddSynchronizationPoint(master);
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     int dummy[] = {(details::AddSyncPoint(master, other), 0),
@@ -67,6 +73,13 @@ void AddSynchronizationPoint(SyncInfo<D> const &master,
 >>>>>>> 315bc6461 (Reduce the number of event record calls (#153))
 }
 
+=======
+    int dummy[] = {(details::AddSyncPoint(master, other), 0),
+                   (details::AddSyncPoint(master, others), 0)...};
+    (void)dummy;
+}
+
+>>>>>>> a0d3bbdd2 (Fix a subtle parameter expansion issue in sync info (#155))
 template <Device D, Device... Ds>
 void AllWaitOnMaster(SyncInfo<D> const &master, SyncInfo<Ds> const &...others)
 {
