@@ -102,6 +102,13 @@ endif ()
 
 # Feature-related options
 include(CMakeDependentOption)
+<<<<<<< HEAD
+=======
+
+option(Hydrogen_ENABLE_ALUMINUM
+  "Enable the Aluminum package for improved device-side communication."
+  OFF)
+>>>>>>> ebfbc6418 (Add support for roctx annotations (#138))
 
 option(Hydrogen_ENABLE_CUDA
   "Search for CUDA support and enable related features if found."
@@ -358,13 +365,19 @@ if (Hydrogen_ENABLE_ROCM)
   find_package(rocthrust CONFIG REQUIRED)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ebfbc6418 (Add support for roctx annotations (#138))
   if (Hydrogen_ENABLE_ROCTRACER)
     find_package(Roctracer MODULE COMPONENTS roctx)
     set(HYDROGEN_HAVE_ROCTRACER ${Roctracer_FOUND})
   endif ()
 
+<<<<<<< HEAD
 =======
 >>>>>>> 4abe4ef0e (Clean up HIP IMPORTED targets in CMake (#137))
+=======
+>>>>>>> ebfbc6418 (Add support for roctx annotations (#138))
   include(HydrogenCleanupHIPTargets)
   h_clean_hip_targets()
 
