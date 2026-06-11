@@ -386,9 +386,13 @@ SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
 {
     constexpr Device D = DeviceForBackend<BackendT>();
 <<<<<<< HEAD
+<<<<<<< HEAD
 #ifdef HYDROGEN_HAVE_GPU
 =======
 >>>>>>> 039d681cc (Make the separate communication stream optional (#184))
+=======
+#ifdef HYDROGEN_HAVE_GPU
+>>>>>>> a5db02886 (Add macro protection to GPU code block (#185))
     if constexpr (D == El::Device::GPU)
     {
         static bool const use_separate_stream = use_separate_comm_stream();
@@ -398,10 +402,14 @@ SyncInfo<DeviceForBackend<BackendT>()> const& BackendSyncInfo()
         }
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 #endif // HYDROGEN_HAVE_GPU
 =======
 
 >>>>>>> 039d681cc (Make the separate communication stream optional (#184))
+=======
+#endif // HYDROGEN_HAVE_GPU
+>>>>>>> a5db02886 (Add macro protection to GPU code block (#185))
     static SyncInfoManager<D> si_mgr_(BackendT::Name());
     return si_mgr_.si_;
 }
