@@ -50,10 +50,14 @@ namespace gpu_lapack_impl = hydrogen::rocsolver;
 
 #if defined(HYDROGEN_GPU_USE_FP16)
 <<<<<<< HEAD
+<<<<<<< HEAD
 #if defined(HYDROGEN_HAVE_HALF)
 =======
 
 >>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
+=======
+#if defined(HYDROGEN_HAVE_HALF)
+>>>>>>> edfdb2957 (Quick patch for build error without half (#164))
 template <>
 struct hydrogen::Caster<__half, rocblas_half>
 {
@@ -63,6 +67,9 @@ struct hydrogen::Caster<__half, rocblas_half>
     }
 };
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> edfdb2957 (Quick patch for build error without half (#164))
 #else
 template <>
 inline rocblas_half hydrogen::To<rocblas_half, __half>(__half const& x)
@@ -70,9 +77,12 @@ inline rocblas_half hydrogen::To<rocblas_half, __half>(__half const& x)
     return *(reinterpret_cast<rocblas_half const*>(&x));
 }
 #endif
+<<<<<<< HEAD
 =======
 
 >>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
+=======
+>>>>>>> edfdb2957 (Quick patch for build error without half (#164))
 #endif
 
 #else
