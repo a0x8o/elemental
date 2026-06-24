@@ -129,35 +129,7 @@ struct TypeTraits<gpu_half_type>
 
 }// namespace hydrogen
 
-<<<<<<< HEAD
 #if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
-=======
-<<<<<<< HEAD
-#if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
-=======
-#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)))
->>>>>>> 2aa6443c8 (Enable FP16 on ROCm systems (#109))
-=======
-#if defined(HYDROGEN_HAVE_ROCM) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
->>>>>>> e10f53e03 (Don't declare operator overloads for half with CUDA >= 12.2. (#175))
-=======
-#if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
->>>>>>> 13b8f0858 (Add debugging annotations to the MemoryPool (#141))
-=======
-#if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
->>>>>>> a03e87101 (A fix for bleeding edge clang (#187))
-=======
-#if (defined(HYDROGEN_HAVE_ROCM) && defined(__clang__) && __clang__ && __clang_major__ < 19) || (defined(HYDROGEN_HAVE_CUDA) && !(defined(__CUDACC__)) && (CUDA_VERSION < 12020))
->>>>>>> develop
->>>>>>> a0x8o
->>>>>>> prod
 
 /** @brief Enable "update" functionality for __half. */
 template <typename T>
