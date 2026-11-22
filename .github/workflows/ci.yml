@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ALUMINUM_VERSION: v1.4.2
+  ALUMINUM_PREFIX: ${{ github.workspace }}/aluminum-install
+
+jobs:
+  cpu:
+    name: CPU build and test (GCC, Open MPI)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ libopenmpi-dev openmpi-bin \
+            libblas-dev liblapack-dev libhwloc-dev catch2
+
+      - name: Cache Aluminum
+        id: cache-aluminum
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ALUMINUM_PREFIX }}
+          key: aluminum-${{ env.ALUMINUM_VERSION }}-cpu-${{ runner.os }}-ubuntu-22.04
+
+      - name: Build Aluminum (CPU only)
+        if: steps.cache-aluminum.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "$ALUMINUM_VERSION" \
+            https://github.com/LLNL/Aluminum.git aluminum-src
+          cmake -S aluminum-src -B aluminum-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$ALUMINUM_PREFIX" \
+            -DALUMINUM_ENABLE_CUDA=OFF \
+            -DALUMINUM_ENABLE_NCCL=OFF
+          cmake --build aluminum-build --parallel
+          cmake --install aluminum-build
+
+      - name: Configure Hydrogen
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DAluminum_ROOT="$ALUMINUM_PREFIX" \
+            -DHydrogen_ENABLE_TESTING=ON \
+            -DHydrogen_ENABLE_UNIT_TESTS=ON
+
+      - name: Build Hydrogen
+        run: cmake --build build --parallel
+
+      - name: Run tests
+        env:
+          OMPI_MCA_rmaps_base_oversubscribe: "1"
+          OMPI_MCA_btl_vader_single_copy_mechanism: none
+        run: ctest --test-dir build --output-on-failure --timeout 600
